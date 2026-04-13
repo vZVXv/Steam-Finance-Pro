@@ -463,14 +463,16 @@
             // 3. Строки по годам и месяцам
             Object.keys(yearly).sort((a, b) => b - a).forEach(y => {
                 // Строка ГОДА
-                yearBody.innerHTML += `<tr onclick="toggleMonths('${y}')" style="cursor:pointer; background: rgba(102, 192, 244, 0.05);">
-                <td style="color:#66c0f4; font-weight:bold;">${y} ▾</td>
-                <td style="font-weight:bold;">${fmt(yearly[y].out, y, 'out')}</td>
-                <td>${fmt(yearly[y].games, y, 'games')}</td>
-                <td>${fmt(yearly[y].gifts, y, 'gifts')}</td>
-                <td>${fmt(yearly[y].market, y, 'market')}</td>
-                <td style="color:#a4d007;">${fmt(yearly[y].marketIn, y, 'marketIn')}</td>
-            </tr>`;
+    yearBody.innerHTML += `<tr onclick="toggleMonths('${y}')" style="cursor:pointer; background: rgba(102, 192, 244, 0.05);">
+    <td style="color:#66c0f4; font-weight:bold;">
+        <span onclick="event.stopPropagation(); renderAll(allData, '${y}', null)" style="border-bottom: 1px dotted #66c0f4;">${y}</span> ▾
+    </td>
+    <td style="font-weight:bold;">${fmt(yearly[y].out, y, 'out')}</td>
+    <td>${fmt(yearly[y].games, y, 'games')}</td>
+    <td>${fmt(yearly[y].gifts, y, 'gifts')}</td>
+    <td>${fmt(yearly[y].market, y, 'market')}</td>
+    <td style="color:#a4d007;">${fmt(yearly[y].marketIn, y, 'marketIn')}</td>
+</tr>`;
 
                 // Строки МЕСЯЦЕВ (скрыты по умолчанию)
 
