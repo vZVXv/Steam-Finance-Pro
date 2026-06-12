@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Steam Finance Pro 2.0</title>
+    <title>Steam Finance Pro 2.2</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -168,50 +168,91 @@
                 <li>Откройте <a href="https://store.steampowered.com/account/history/" target="_blank" style="color: #fff;">Историю покупок Steam</a> в браузере.</li>
                 <li>Авторизуйтесь и нажимайте <b>"Загрузить больше операций"</b> в самом низу, пока не дойдете до первой покупке (это важно для полной статистики).</li>
                 <li>Нажмите <kbd>F12</kbd> (или ПКМ -> Исследовать элемент) и откройте вкладку <b>Console</b>.</li>
-                <li>Вставьте код ниже и нажмите <kbd>Enter</kbd>. Он автоматически скопирует результат.</li>
-                <li>Создайте текстовый документ, вставьте скопированный текст и сохраните как файл с расширением <b>.json</b>.</li>
+                <li>Вставьте код ниже и нажмите <kbd>Enter</kbd>. Он автоматически скачает файл с вашей историей.</li>
+                <li>Перетащите скачанный файл <b>steam_wallet_history.json</b> в окно ниже.</li>
             </ol>
             <code>
 (() => {
     const rows = document.querySelectorAll('tr.wallet_table_row');
+    
     const parseCurrency = (text) => {
         if (!text || text.trim() === "") return null;
         const clean = text.trim().replace(/\s+/g, ' ');
+        
         const match = clean.match(/^([+-]?)[^\d]*([\d.,]+)\s*(.*)$/);
         if (!match) return null;
+        
         const sign = match[1] === '-' ? '-' : '';
         const amount = match[2].replace(',', '.');
         let currency = match[3] || clean.replace(/[\d.,+-]/g, '').trim();
-        if (clean.includes('$') && !currency.includes('USD')) currency = 'USD';
-        return { amount: parseFloat(sign + amount), currency: currency || "руб." };
+        
+        if (clean.includes('$') && !currency.includes('USD')) {
+            currency = 'USD';
+        }
+        
+        return { 
+            amount: parseFloat(sign + amount),
+            currency: currency || "руб." 
+        };
     };
 
     const data = Array.from(rows).map(row => {
         const date = row.querySelector('.wht_date')?.innerText.trim() || null;
-        const transactionLink = (row.getAttribute('onclick') || "").match(/'([^']+)'/)?.[1] || null;
+        const onclick = row.getAttribute('onclick') || "";
+        const transactionLink = onclick.match(/'([^']+)'/)?.[1] || null;
+        
         const type = row.querySelector('.wht_type div')?.innerText.trim() || null;
+        const paymentMethod = row.querySelector('.wth_payment')?.innerText.trim().replace(/\s+/g, ' ') || null;
+        
         const itemsCell = row.querySelector('.wht_items');
         let items = [];
+
         if (itemsCell) {
             const cellText = itemsCell.innerText;
-            if (cellText.includes('Торговая площадка Steam')) items.push("Торговая площадка Steam");
-            else if (cellText.includes('Перевод валюты')) items.push(cellText.trim());
-            else {
+            
+            if (cellText.includes('Торговая площадка Steam')) {
+                items.push("Торговая площадка Steam");
+            } else if (cellText.includes('Перевод валюты')) {
+                items.push(cellText.trim());
+            } else {
                 const itemDivs = itemsCell.querySelectorAll('div[style="clear: both"]');
-                if (itemDivs.length > 0) items = Array.from(itemDivs).map(div => div.innerText.trim());
-                else items.push(itemsCell.childNodes[0]?.textContent?.trim() || "");
+                if (itemDivs.length > 0) {
+                    items = Array.from(itemDivs).map(div => div.innerText.trim());
+                } else {
+                    const rawText = itemsCell.childNodes[0]?.textContent?.trim();
+                    if (rawText) items.push(rawText);
+                }
             }
         }
+
         return {
-            date, transaction_link: transactionLink, type,
-            items: items.filter(Boolean), 
+            date,
+            transaction_link: transactionLink,
+            type,
+            payment_method: paymentMethod,
+            items: items, 
             total: parseCurrency(row.querySelector('.wht_total')?.innerText),
             wallet_change: parseCurrency(row.querySelector('.wht_wallet_change')?.innerText),
             wallet_balance: parseCurrency(row.querySelector('.wht_wallet_balance')?.innerText)
         };
     });
-    copy(JSON.stringify(data, null, 4));
-    console.log("Скопировано!");
+
+    const json = JSON.stringify(data, null, 4);
+    
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "steam_wallet_history.json";
+    
+    document.body.appendChild(a);
+    a.click();
+    
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log("✅ Готово! Данные строго типизированы, очищены от мусора и сохранены в файл.");
+    return data;
 })();
             </code>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
