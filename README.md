@@ -3,3 +3,6 @@ Steam Finance Pro — это персональный аналитический
 
 
 ЗАПУСК - https://vzvxv.github.io/Steam-Finance-Pro/
+<p align="center">
+  <img src="img.png" alt="Anima 2B Style Explorer Banner" width="1000">
+</p>
