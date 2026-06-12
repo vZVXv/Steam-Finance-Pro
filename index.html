@@ -1,331 +1,385 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
-    <title>Steam Finance Pro</title>
+    <title>Steam Finance Pro 2.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --bg-main: #1b2838;
+            --bg-panel: #2a475e;
+            --bg-dark: #171a21;
+            --text-main: #c7d5e0;
+            --steam-blue: #66c0f4;
+            --steam-light-blue: #3d6b8d;
+            --steam-green: #a4d007;
+            --steam-red: #ac3442;
+            --steam-purple: #84319b;
+            --steam-orange: #ffb01f;
+        }
+
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #1b2838;
-            color: #c7d5e0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
             padding: 20px;
+            line-height: 1.6;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1300px;
             margin: 0 auto;
-            background: #2a475e;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
-        .yearly-section {
-            background: #171a21;
-            padding: 20px;
-            border-radius: 4px;
-            margin-bottom: 25px;
-            border: 1px solid #3d6b8d;
-        }
+        h1 { color: #fff; margin-bottom: 5px; }
+        .subtitle { color: var(--steam-light-blue); margin-top: 0; margin-bottom: 30px; }
 
-        .year-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .year-table th {
-            color: #66c0f4;
-            text-align: left;
-            padding: 12px;
-            border-bottom: 2px solid #3d6b8d;
-            font-size: 0.8em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .year-table td {
-            padding: 12px;
-            border-bottom: 1px solid #2a475e;
-            font-size: 0.95em;
-            vertical-align: top;
-        }
-
-        /* Стиль для строки ИТОГО */
-        .total-row {
-            background: rgba(102, 192, 244, 0.1);
-            font-weight: bold;
-            border-bottom: 2px solid #66c0f4 !important;
-        }
-
-        .total-row td {
+        /* Кнопки */
+        .btn {
+            background: var(--steam-light-blue);
             color: #fff;
-            font-size: 1.05em;
-        }
-
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #171a21;
-            font-size: 0.85em;
-            margin-top: 20px;
-        }
-
-        .history-table th {
-            background: #000;
-            color: #66c0f4;
-            padding: 12px;
-            text-align: left;
-            position: sticky;
-            top: 0;
-        }
-
-        .history-table td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #3d6b8d;
-        }
-
-        .amt-in {
-            color: #7a9b05;
-        }
-
-        .amt-out {
-            color: #ac3442;
-        }
-
-        .tag {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 0.75em;
-            text-transform: uppercase;
-            font-weight: bold;
-            color: #fff;
-        }
-
-        input[type="file"] {
-            background: #171a21;
-            border: 1px solid #3d6b8d;
-            color: #fff;
-            padding: 8px;
+            border: none;
+            padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 0.9em;
+            transition: 0.2s;
         }
+        .btn:hover { background: var(--steam-blue); color: var(--bg-main); }
+        .btn-green { background: var(--steam-green); color: #000; font-weight: bold; }
+        .btn-green:hover { background: #8bb306; }
+        
+        /* Зона загрузки файла */
+        .upload-area {
+            background: rgba(42, 71, 94, 0.4);
+            border: 2px dashed var(--steam-light-blue);
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-bottom: 25px;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            background: rgba(102, 192, 244, 0.15);
+            border-color: var(--steam-blue);
+        }
+        .upload-area input { display: none; }
+        .upload-icon { font-size: 3em; margin-bottom: 10px; display: block; }
 
+        /* Дашборд: Карточки */
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: var(--bg-dark);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .stat-card.red { border-left: 4px solid var(--steam-red); }
+        .stat-card.blue { border-left: 4px solid var(--steam-blue); }
+        .stat-card.green { border-left: 4px solid var(--steam-green); }
+        .stat-card.neutral { border-left: 4px solid var(--steam-light-blue); }
+        
+        .stat-card h4 { margin: 0 0 10px 0; color: #8f98a0; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-card .value { font-size: 1.8em; color: #fff; font-weight: bold; }
+        .stat-card .currency { font-size: 0.5em; color: var(--steam-light-blue); vertical-align: middle; }
 
-
-        /* Стиль для месяцев распродаж */
-        .sale-month {
-            background: rgba(164, 208, 7, 0.15) !important;
-            /* Светло-зеленый оттенок Steam */
+        /* Графики */
+        .charts-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .chart-box {
+            background: var(--bg-dark);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--steam-light-blue);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             position: relative;
         }
-
-        .sale-icon {
-            font-size: 0.9em;
-            margin-right: 5px;
-            filter: drop-shadow(0 0 2px #a4d007);
+        
+        @media (max-width: 900px) {
+            .charts-container { grid-template-columns: 1fr; }
         }
+
+        /* Таблицы */
+        .panel {
+            background: var(--bg-dark);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid var(--steam-light-blue);
+            overflow-x: auto;
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { color: var(--steam-blue); padding: 12px; border-bottom: 2px solid var(--steam-light-blue); font-size: 0.85em; text-transform: uppercase; }
+        td { padding: 12px; border-bottom: 1px solid var(--bg-panel); font-size: 0.95em; vertical-align: middle; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        
+        .total-row td { background: rgba(102, 192, 244, 0.1); font-weight: bold; color: #fff; border-bottom: 2px solid var(--steam-blue) !important; }
+        .clickable-cell { cursor: pointer; border-bottom: 1px dotted var(--steam-blue); transition: 0.2s; display: inline-block; margin-bottom: 2px;}
+        .clickable-cell:hover { color: #fff; }
+        
+        /* Теги и цвета текста */
+        .amt-in { color: var(--steam-green); font-weight: bold; }
+        .amt-out { color: var(--steam-red); }
+        .tag { padding: 4px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold; color: #fff; display: inline-block; text-align: center; min-width: 70px;}
+        
+        /* Модальное окно */
+        #instructionsModal {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--bg-dark); border: 1px solid var(--steam-blue); padding: 30px; border-radius: 12px;
+            z-index: 1000; width: 90%; max-width: 650px; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+        #overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 999; backdrop-filter: blur(3px);
+        }
+        code { background: #000; color: var(--steam-green); padding: 15px; display: block; border-radius: 6px; font-size: 0.85em; white-space: pre-wrap; word-wrap: break-word; max-height: 250px; overflow-y: auto; border: 1px solid #333; }
+        
+        /* Легенда распродаж */
+        .sale-month { background: rgba(164, 208, 7, 0.08) !important; border-left: 3px solid var(--steam-green); }
+        .sale-icon { margin-right: 8px; filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); }
+        
+        .filter-status { background: var(--steam-blue); color: var(--bg-dark); padding: 5px 10px; border-radius: 4px; font-size: 0.85em; font-weight: bold; margin-bottom: 15px; display: inline-block; cursor: pointer;}
     </style>
 </head>
-
 <body>
 
     <div class="container">
-        <h1>Финансовый отчет Steam</h1>
+        <h1>Steam Finance Pro</h1>
+        <p class="subtitle">Интерактивный анализ истории ваших покупок</p>
 
-        <button onclick="toggleInstructions()"
-            style="background: #3d6b8d; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; margin-bottom: 20px; display: block;">
-            ❓ Как получить свой JSON?
+        <button class="btn" onclick="toggleInstructions()" style="margin-bottom: 20px;">
+            ❓ Инструкция: Как получить свой JSON?
         </button>
 
-        <div
-            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 25px; align-items: stretch;">
-
-
-            <!-- Модальное окно с инструкцией -->
-            <div id="instructionsModal"
-                style="display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #171a21; border: 2px solid #66c0f4; padding: 25px; border-radius: 8px; z-index: 1000; max-width: 600px; box-shadow: 0 0 50px rgba(0,0,0,0.9);">
-                <h2 style="color: #66c0f4; margin-top: 0;">Инструкция по получению данных</h2>
-                <ol style="line-height: 1.6;">
-                    <li>Откройте страницу: <a href="https://store.steampowered.com/account/history/" target="_blank"
-                            style="color: #fff;">История покупок Steam</a></li>
-                    <li>Авторизуйтесь в системе.</li>
-                    <li>Нажимайте кнопку <b>"Загрузить больше операций"</b> внизу страницы, пока не прогрузите историю
-                        до самого начала (это важно!).</li>
-                    <li>Нажмите <kbd>F12</kbd> (или ПКМ -> Исследовать элемент) и перейдите во вкладку <b>Console</b>.
-                    </li>
-                    <li>Скопируйте скрипт ниже, вставьте в консоль и нажмите <kbd>Enter</kbd>.</li>
-                    <li>Вам скопируется вся информация о покупках в буфер обмена, создайте текстовый файл и вставьте
-                        информацию туда (CTRL+V).</li>
-                    <li>Замените расширение файла .txt на .JSON</li>
-                </ol>
-
-
-                <div style="background: #000; padding: 10px; border-radius: 4px; position: relative;">
-                    <!-- Добавили max-height и overflow-y для прокрутки -->
-                    <div style="max-height: 300px; overflow-y: auto; border: 1px solid #333; padding: 5px;">
-                        <code id="scriptCode"
-                            style="color: #a4d007; font-size: 0.85em; display: block; white-space: pre;">
+        <div id="instructionsModal">
+            <h2 style="color: var(--steam-blue); margin-top: 0;">Как выгрузить данные из Steam</h2>
+            <ol style="line-height: 1.6; padding-left: 20px;">
+                <li>Откройте <a href="https://store.steampowered.com/account/history/" target="_blank" style="color: #fff;">Историю покупок Steam</a> в браузере.</li>
+                <li>Авторизуйтесь и нажимайте <b>"Загрузить больше операций"</b> в самом низу, пока не дойдете до первой покупке (это важно для полной статистики).</li>
+                <li>Нажмите <kbd>F12</kbd> (или ПКМ -> Исследовать элемент) и откройте вкладку <b>Console</b>.</li>
+                <li>Вставьте код ниже и нажмите <kbd>Enter</kbd>. Он автоматически скопирует результат.</li>
+                <li>Создайте текстовый документ, вставьте скопированный текст и сохраните как файл с расширением <b>.json</b>.</li>
+            </ol>
+            <code>
 (() => {
     const rows = document.querySelectorAll('tr.wallet_table_row');
-    
     const parseCurrency = (text) => {
         if (!text || text.trim() === "") return null;
         const clean = text.trim().replace(/\s+/g, ' ');
-        const parts = clean.split(' ');
-        
-        let amount = parts[0].replace(/[^\d,.-]/g, '').replace(',', '.');
-        amount = amount.startsWith('+') ? amount.slice(1) : amount;
-        
-        const currency = parts.slice(1).join(' ');
-        return { amount, currency };
+        const match = clean.match(/^([+-]?)[^\d]*([\d.,]+)\s*(.*)$/);
+        if (!match) return null;
+        const sign = match[1] === '-' ? '-' : '';
+        const amount = match[2].replace(',', '.');
+        let currency = match[3] || clean.replace(/[\d.,+-]/g, '').trim();
+        if (clean.includes('$') && !currency.includes('USD')) currency = 'USD';
+        return { amount: parseFloat(sign + amount), currency: currency || "руб." };
     };
 
     const data = Array.from(rows).map(row => {
-        const date = row.querySelector('.wht_date')?.innerText.trim();
-        const onclick = row.getAttribute('onclick') || "";
-        const transactionLink = onclick.match(/'([^']+)'/)?.[1] || "";
-        
-        const type = row.querySelector('.wht_type div')?.innerText.trim();
-        const paymentMethod = row.querySelector('.wth_payment')?.innerText.trim().replace(/\s+/g, ' ');
-        
+        const date = row.querySelector('.wht_date')?.innerText.trim() || null;
+        const transactionLink = (row.getAttribute('onclick') || "").match(/'([^']+)'/)?.[1] || null;
+        const type = row.querySelector('.wht_type div')?.innerText.trim() || null;
         const itemsCell = row.querySelector('.wht_items');
-        let items;
-
-        if (itemsCell?.innerText.includes('Торговая площадка Steam')) {
-            items = "Торговая площадка Steam";
-        } else {
-            const itemsList = itemsCell?.innerText.split('\n')
-                .map(i => i.trim())
-                .filter(i => i && !i.includes('Подарок отправлен') && !i.includes('Получить помощь'));
-            
-            // Если предмет один — строка, если много — массив
-            items = itemsList.length === 1 ? itemsList[0] : itemsList;
+        let items = [];
+        if (itemsCell) {
+            const cellText = itemsCell.innerText;
+            if (cellText.includes('Торговая площадка Steam')) items.push("Торговая площадка Steam");
+            else if (cellText.includes('Перевод валюты')) items.push(cellText.trim());
+            else {
+                const itemDivs = itemsCell.querySelectorAll('div[style="clear: both"]');
+                if (itemDivs.length > 0) items = Array.from(itemDivs).map(div => div.innerText.trim());
+                else items.push(itemsCell.childNodes[0]?.textContent?.trim() || "");
+            }
         }
-
         return {
-            date,
-            transaction_link: transactionLink,
-            type,
-            payment_method: paymentMethod,
-            items: items,
+            date, transaction_link: transactionLink, type,
+            items: items.filter(Boolean), 
             total: parseCurrency(row.querySelector('.wht_total')?.innerText),
             wallet_change: parseCurrency(row.querySelector('.wht_wallet_change')?.innerText),
             wallet_balance: parseCurrency(row.querySelector('.wht_wallet_balance')?.innerText)
         };
     });
-
-    const json = JSON.stringify(data, null, 4);
-    copy(json);
-    
-    return data;
-})();</code>
-                    </div>
-                    <button onclick="copyScript()"
-                        style="margin-top: 10px; background: #66c0f4; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; font-weight: bold; width: 100%;">
-                        📋 Скопировать весь код
-                    </button>
-                </div>
-
-
-                <button onclick="toggleInstructions()"
-                    style="margin-top: 20px; background: #ac3442; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; width: 100%;">Закрыть</button>
-            </div>
-
-            <!-- Затемнение фона -->
-            <div id="overlay" onclick="toggleInstructions()"
-                style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 999;">
-            </div>
-
-
-            <div style="margin-bottom: 25px;">
-                <label>Загрузить JSON: </label>
-                <input type="file" id="fileInput" accept=".json">
-            </div>
-
-            <!-- Легенда (появится после загрузки) -->
-            <div id="saleLegend"
-                style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 4px; border: 1px solid #3d6b8d; font-size: 0.85em; display: none;">
-                <div
-                    style="color: #66c0f4; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9em;">
-                    Сезоны распродаж
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div><span class="sale-icon">❄️</span> <span style="color:#66c0f4">Зимняя</span></div>
-                    <div><span class="sale-icon">🌱</span> <span style="color:#a4d007">Весенняя</span></div>
-                    <div><span class="sale-icon">☀️</span> <span style="color:#ffb01f">Летняя</span></div>
-                    <div><span class="sale-icon">🍂</span> <span style="color:#e9684c">Осенняя</span></div>
-                </div>
+    copy(JSON.stringify(data, null, 4));
+    console.log("Скопировано!");
+})();
+            </code>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-green" style="flex: 1;" onclick="copyScript()">📋 Скопировать код</button>
+                <button class="btn" style="background: var(--steam-red); flex: 1;" onclick="toggleInstructions()">Закрыть</button>
             </div>
         </div>
+        <div id="overlay" onclick="toggleInstructions()"></div>
 
+        <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <span class="upload-icon">📂</span>
+            <h3>Перетащите ваш JSON файл сюда</h3>
+            <p style="color: var(--steam-light-blue); margin-top: 5px;">или кликните для выбора файла</p>
+            <input type="file" id="fileInput" accept=".json">
+        </div>
 
         <div id="results" style="display:none;">
-            <div class="yearly-section">
-                <h3 style="margin-top: 0; color: #66c0f4; display: flex; justify-content: space-between;">
+            
+            <div class="dashboard-cards">
+                <div class="stat-card red">
+                    <h4>Всего потрачено</h4>
+                    <div class="value" id="statTotalOut">0</div>
+                </div>
+                <div class="stat-card blue">
+                    <h4>Потрачено на Игры</h4>
+                    <div class="value" id="statGames">0</div>
+                </div>
+                <div class="stat-card green">
+                    <h4>Доход с Торговой площадки</h4>
+                    <div class="value" id="statMarketIn">0</div>
+                </div>
+                <div class="stat-card neutral">
+                    <h4>Всего транзакций</h4>
+                    <div class="value" id="statTxCount">0</div>
+                </div>
+            </div>
+
+            <div class="charts-container">
+                <div class="chart-box">
+                    <h4 style="margin-top: 0; color: var(--steam-blue);">Динамика операций по годам</h4>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <h4 style="margin-top: 0; color: var(--steam-blue);">Структура расходов</h4>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="doughnutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+<div class="panel">
+                <h3 style="margin-top: 0; color: var(--steam-blue); display: flex; justify-content: space-between; align-items: center;">
                     Сводная статистика по времени
-                    <span style="font-size: 0.6em; color: #888; font-weight: normal;">* технические операции не
-                        учитываются</span>
+                    <span style="font-size: 0.65em; color: #888; font-weight: normal; background: #000; padding: 4px 8px; border-radius: 4px;">
+                        Кликните на сумму, чтобы отфильтровать детальную историю ниже 👇
+                    </span>
                 </h3>
-                <table class="year-table">
+
+                <div id="saleLegend" style="margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 4px; border: 1px solid #3d6b8d; font-size: 0.85em;">
+                    <div style="color: #66c0f4; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9em;">
+                        Сезоны распродаж
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div><span class="sale-icon">❄️</span> <span style="color:#66c0f4">Зимняя</span></div>
+                        <div><span class="sale-icon">🌱</span> <span style="color:#a4d007">Весенняя</span></div>
+                        <div><span class="sale-icon">☀️</span> <span style="color:#ffb01f">Летняя</span></div>
+                        <div><span class="sale-icon">🍂</span> <span style="color:#e9684c">Осенняя</span></div>
+                    </div>
+                </div>
+
+                <table>
                     <thead>
                         <tr>
-                            <th style="width: 100px;">Период</th>
-                            <th>Чистые траты</th>
+                            <th style="width: 120px;">Период</th>
+                            <th>Все траты</th>
                             <th>Игры</th>
-                            <th>Маркет</th>
+                            <th>Маркет (покупка)</th>
                             <th>Подарки</th>
-                            <th>Зачисления</th>
+                            <th style="color: var(--steam-green);">Маркет (прибыль)</th>
                         </tr>
                     </thead>
-                    <tbody id="yearTableBody">
-                        <!-- Сюда вставится строка ИТОГО и Года -->
-                    </tbody>
+                    <tbody id="yearTableBody"></tbody>
                 </table>
             </div>
 
-            <h3 style="color: #66c0f4;">Детальная история</h3>
-            <table class="history-table">
-                <thead>
-                    <tr>
-                        <th>Дата</th>
-                        <th>Тип</th>
-                        <th>Операция</th>
-                        <th>Сумма</th>
-                        <th>Баланс</th>
-                    </tr>
-                </thead>
-                <tbody id="mainTable"></tbody>
-            </table>
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
+                <h3 style="color: var(--steam-blue); margin: 0;">Детальная история</h3>
+                <div id="activeFilter" class="filter-status" style="display: none;" onclick="renderHistory(allData)">
+                    Показан фильтр: <span></span> ✖ (Сбросить)
+                </div>
+            </div>
+            <div class="panel" style="padding: 0;">
+                <table style="margin: 0;">
+                    <thead style="background: #000; position: sticky; top: 0;">
+                        <tr>
+                            <th style="padding-left: 20px;">Дата</th>
+                            <th>Тип</th>
+                            <th>Операция</th>
+                            <th>Сумма</th>
+                            <th>Баланс</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mainTable"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
-        document.getElementById('fileInput').addEventListener('change', function (e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
             const reader = new FileReader();
             reader.onload = (event) => analyze(JSON.parse(event.target.result));
             reader.readAsText(file);
-        });
-
-        let allData = []; // Хранилище для фильтрации
-
-        function analyze(data) {
-            allData = data; // Сохраняем для фильтра
-            renderAll(data);
-            // Добавь это в конец функции отрисовки
-            document.getElementById('saleLegend').style.display = 'block';
-
         }
 
-        function renderAll(dataToRender, filterYear = null, filterCat = null) {
-            const overall = { out: {}, games: {}, market: {}, gifts: {}, wallet: {}, marketIn: {} };
-            const yearly = {};
-            const tbody = document.getElementById('mainTable');
-            tbody.innerHTML = "";
+        function toggleInstructions() {
+            const modal = document.getElementById('instructionsModal');
+            const overlay = document.getElementById('overlay');
+            const isVisible = modal.style.display === 'block';
+            modal.style.display = isVisible ? 'none' : 'block';
+            overlay.style.display = isVisible ? 'none' : 'block';
+        }
 
-            dataToRender.forEach(item => {
+        function copyScript() {
+            navigator.clipboard.writeText(document.querySelector('code').innerText).then(() => {
+                alert('Скрипт скопирован в буфер обмена!');
+            });
+        }
+
+        let allData = [];
+        let globalOverall = {};
+        let globalYearly = {};
+        let mainCurrency = "RUB";
+        let barChartInstance = null;
+        let pieChartInstance = null;
+
+        function analyze(data) {
+            allData = data;
+            document.getElementById('dropZone').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            
+            processData(data);
+            renderDashboard();
+            renderSummaryTable();
+            renderHistory(allData);
+        }
+
+        function processData(data) {
+            globalOverall = { out: {}, games: {}, market: {}, gifts: {}, wallet: {}, marketIn: {} };
+            globalYearly = {};
+
+            data.forEach(item => {
                 if (!item.total || item.total.amount === null) return;
 
                 const desc = Array.isArray(item.items) ? item.items.join(', ') : (item.items || "");
@@ -338,40 +392,32 @@
                 const currency = (item.total.currency || "RUB").replace(" Кредит", "").trim();
 
                 let isIncome = (item.total.currency || "").includes("Кредит");
-                if (item.wallet_change && item.wallet_change.amount) {
-                    if (parseFloat(item.wallet_change.amount.toString().replace(',', '.')) > 0) isIncome = true;
+                if (item.wallet_change && item.wallet_change.amount && parseFloat(item.wallet_change.amount.toString().replace(',', '.')) > 0) {
+                    isIncome = true;
                 }
 
                 const isMarket = type.includes("продажа") || desc.includes("Торговая площадка");
                 const isGift = type.includes("подарка") || desc.includes("Подарок") || desc.includes("Gift");
 
-                // Извлекаем Год и Месяц
                 const itemYear = item.date ? (item.date.match(/\d{4}/)?.[0] || "??") : "??";
                 const dateParts = item.date ? item.date.split(' ') : [];
-                // Обычно в Steam дата формата "10 окт. 2023", берем "окт."
                 const itemMonth = dateParts.length >= 2 ? dateParts[1].replace(',', '') : "Прочее";
 
-                // 1. СБОР СТАТИСТИКИ
+                item._parsed = { isTechnical, isRefund, isIncome, isMarket, isGift, amount, currency, year: itemYear, month: itemMonth, desc };
+
                 if (!isTechnical) {
-                    // Инициализируем структуру Года
-                    if (!yearly[itemYear]) {
-                        yearly[itemYear] = {
-                            out: {}, games: {}, market: {}, gifts: {}, wallet: {}, marketIn: {},
-                            months: {}
-                        };
+                    if (!globalYearly[itemYear]) {
+                        globalYearly[itemYear] = { out: {}, games: {}, market: {}, gifts: {}, wallet: {}, marketIn: {}, months: {} };
                     }
-                    // Инициализируем структуру Месяца внутри года
-                    if (!yearly[itemYear].months[itemMonth]) {
-                        yearly[itemYear].months[itemMonth] = { out: {}, games: {}, market: {}, gifts: {}, wallet: {}, marketIn: {} };
+                    if (!globalYearly[itemYear].months[itemMonth]) {
+                        globalYearly[itemYear].months[itemMonth] = { out: {}, games: {}, market: {}, gifts: {}, wallet: {}, marketIn: {} };
                     }
 
                     const update = (obj, val) => { obj[currency] = (obj[currency] || 0) + val; };
-
-                    // Вспомогательная функция для записи сразу в три уровня
                     const record = (cat, val) => {
-                        update(overall[cat], val);
-                        update(yearly[itemYear][cat], val);
-                        update(yearly[itemYear].months[itemMonth][cat], val);
+                        update(globalOverall[cat], val);
+                        update(globalYearly[itemYear][cat], val);
+                        update(globalYearly[itemYear].months[itemMonth][cat], val);
                     };
 
                     if (isRefund) {
@@ -387,167 +433,237 @@
                         else record('games', amount);
                     }
                 }
+            });
 
+            let maxOut = 0;
+            for (const [curr, val] of Object.entries(globalOverall.out)) {
+                if (val > maxOut) { maxOut = val; mainCurrency = curr; }
+            }
+        }
 
-                // 2. ФИЛЬТРАЦИЯ ДЛЯ ТАБЛИЦЫ ИСТОРИИ
-                let showRow = true;
-                if (filterYear && itemYear !== filterYear) showRow = false;
-                if (filterCat) {
-                    if (filterCat === 'out' && (isIncome || isTechnical)) showRow = false;
-                    if (filterCat === 'games' && (isIncome || isTechnical || isMarket || isGift)) showRow = false;
-                    if (filterCat === 'market' && (isIncome || isTechnical || !isMarket)) showRow = false;
-                    if (filterCat === 'marketIn' && (!isIncome || isTechnical || !isMarket)) showRow = false;
-                    if (filterCat === 'wallet' && (!isIncome || isTechnical || isMarket)) showRow = false;
-                    if (filterCat === 'gifts' && (isIncome || isTechnical || !isGift)) showRow = false;
-                }
+        const fNum = (num) => num ? num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
 
-                // 3. ОТРИСОВКА
-                if (showRow) {
-                    let label = isIncome ? (isMarket ? "ПРОДАЖА" : "ПОПОЛНЕНИЕ") : (isGift ? "ПОДАРОК" : (isMarket ? "МАРКЕТ" : "ПОКУПКА"));
-                    let tagColor = isIncome ? (isMarket ? '#5c7e10' : '#7a9b05') : (isGift ? '#84319b' : (isMarket ? '#855003' : '#ac3442'));
+        function renderDashboard() {
+            // Карточки данных
+            document.getElementById('statTotalOut').innerHTML = `${fNum(globalOverall.out[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
+            document.getElementById('statGames').innerHTML = `${fNum(globalOverall.games[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
+            document.getElementById('statMarketIn').innerHTML = `${fNum(globalOverall.marketIn[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
+            document.getElementById('statTxCount').innerText = allData.length;
 
-                    if (isTechnical) { label = "КОНВЕРТАЦИЯ"; tagColor = '#444'; }
-                    if (isRefund) { label = "ВОЗВРАТ"; tagColor = '#607d8b'; } // Сине-серый для возвратов
+            const years = Object.keys(globalYearly).filter(y => y !== "??").sort((a,b) => a - b);
+            
+            const spendData = years.map(y => globalYearly[y].out[mainCurrency] || 0);
+            const gamesData = years.map(y => globalYearly[y].games[mainCurrency] || 0);
+            const giftsData = years.map(y => globalYearly[y].gifts[mainCurrency] || 0);
+            const incomeData = years.map(y => globalYearly[y].marketIn[mainCurrency] || 0);
+            
+            Chart.defaults.color = '#8f98a0';
+            Chart.defaults.font.family = "'Segoe UI', sans-serif";
 
-                    const content = item.transaction_link ? `<a href="${item.transaction_link}" target="_blank" style="color: inherit; text-decoration: none; border-bottom: 1px dashed #66c0f4;">${desc}</a>` : desc;
-
-                    tbody.insertAdjacentHTML('beforeend', `<tr style="${isTechnical || isRefund ? 'opacity:0.6; background: rgba(0,0,0,0.1);' : ''}">
-                    <td>${item.date || '-'}</td>
-                    <td><span class="tag" style="background:${tagColor}">${label}</span></td>
-                    <td><div style="max-width:400px; font-size:0.9em; overflow:hidden; text-overflow:ellipsis;">${content}</div></td>
-                    <td class="${isTechnical ? '' : (isIncome ? 'amt-in' : 'amt-out')}" style="white-space:nowrap">
-                        ${isTechnical ? '' : (isIncome ? '+' : '-')}${amount.toFixed(2)} ${currency}
-                    </td>
-                    <td style="color:#888; font-size:0.85em; white-space:nowrap">${item.wallet_balance ? (item.wallet_balance.amount + ' ' + (item.wallet_balance.currency || '')) : '-'}</td>
-                </tr>`);
+            // ГРАФИК ПО ГОДАМ (Добавлен массив Игр)
+            if (barChartInstance) barChartInstance.destroy();
+            barChartInstance = new Chart(document.getElementById('barChart'), {
+                type: 'bar',
+                data: {
+                    labels: years,
+                    datasets: [
+                        {
+                            label: `Всего потрачено (${mainCurrency})`,
+                            data: spendData,
+                            backgroundColor: '#ac3442', // Красный под карточку Трат
+                            borderRadius: 4
+                        },
+                        {
+                            label: `Игры (${mainCurrency})`,
+                            data: gamesData,
+                            backgroundColor: '#66c0f4', // Голубой под карточку Игр
+                            borderRadius: 4
+                        },
+                        {
+                            label: `Подарки (${mainCurrency})`,
+                            data: giftsData,
+                            backgroundColor: '#84319b', // Фиолетовый под карточку подарков
+                            borderRadius: 4
+                        },
+                        {
+                            label: `Доход с ТП (${mainCurrency})`,
+                            data: incomeData,
+                            backgroundColor: '#a4d007', // Зеленый под карточку дохода
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { 
+                            display: true, 
+                            labels: { color: '#c7d5e0' }
+                        },
+                        tooltip: { mode: 'index', intersect: false }
+                    }, 
+                    scales: { 
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' } }, 
+                        x: { grid: { display: false } } 
+                    } 
                 }
             });
 
-            if (!filterYear && !filterCat) renderCombinedTable(overall, yearly);
+            // КРУГОВОЙ ГРАФИК СТРУКТУРЫ РАСХОДОВ
+            const pieData = [
+                globalOverall.games[mainCurrency] || 0,
+                globalOverall.market[mainCurrency] || 0,
+                globalOverall.gifts[mainCurrency] || 0
+            ];
+
+            if (pieChartInstance) pieChartInstance.destroy();
+            pieChartInstance = new Chart(document.getElementById('doughnutChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Игры', 'Маркет (Покупки)', 'Подарки'],
+                    datasets: [{
+                        data: pieData,
+                        backgroundColor: ['#66c0f4', '#ffb01f', '#84319b'], // Голубой (Игры), Оранжевый (Маркет), Фиолетовый (Подарки)
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#c7d5e0' } } }, cutout: '70%' }
+            });
         }
 
-        function renderCombinedTable(overall, yearly) {
-            const fmt = (obj, year, cat) => {
-                const text = Object.entries(obj).map(([c, v]) => `<div>${v.toFixed(2)} <small>${c}</small></div>`).join('') || "—";
-                // Добавил event.stopPropagation(), чтобы клик по цифрам не сворачивал строку года
-                return `<div class="clickable-cell" onclick="event.stopPropagation(); renderAll(allData, '${year || ''}', '${cat || ''}')" style="cursor:pointer; border-bottom: 1px dotted #66c0f4;">${text}</div>`;
+        function renderSummaryTable() {
+            const fmt = (obj, year, cat, label) => {
+                const text = Object.entries(obj).map(([c, v]) => `<div>${fNum(v)} <small style="color:#888">${c}</small></div>`).join('') || "—";
+                return `<div class="clickable-cell" onclick="event.stopPropagation(); setFilter('${year || ''}', '${cat || ''}', '${label}')" title="Нажмите, чтобы отфильтровать операции">${text}</div>`;
             };
 
             const yearBody = document.getElementById('yearTableBody');
-
-            // 1. Заголовки
-            const header = document.querySelector('.year-table thead tr');
-            if (header) {
-                header.innerHTML = `
-                <th style="width: 100px;">Период</th>
-                <th>Траты (Всего)</th>
-                <th>Игры</th>
-                <th>Подарки</th>
-                <th>Маркет (Покупки)</th>
-                <th style="color: #a4d007;">Маркет (Прибыль)</th>
-            `;
-            }
-
             yearBody.innerHTML = "";
 
-            // 2. Строка ИТОГО
             yearBody.innerHTML += `<tr class="total-row">
-            <td onclick="renderAll(allData)" style="cursor:pointer; color:#66c0f4;">ВСЁ ВРЕМЯ</td>
-            <td>${fmt(overall.out, null, 'out')}</td>
-            <td>${fmt(overall.games, null, 'games')}</td>
-            <td>${fmt(overall.gifts, null, 'gifts')}</td>
-            <td>${fmt(overall.market, null, 'market')}</td>
-            <td style="color:#a4d007;">${fmt(overall.marketIn, null, 'marketIn')}</td>
-        </tr>`;
+                <td onclick="setFilter('','', 'Все время')" style="cursor:pointer; color:var(--steam-blue);">ВСЁ ВРЕМЯ</td>
+                <td>${fmt(globalOverall.out, null, 'out', 'Все траты')}</td>
+                <td>${fmt(globalOverall.games, null, 'games', 'Покупка игр')}</td>
+                <td>${fmt(globalOverall.market, null, 'market', 'Покупки на Маркете')}</td>
+                <td>${fmt(globalOverall.gifts, null, 'gifts', 'Подарки')}</td>
+                <td style="color:var(--steam-green);">${fmt(globalOverall.marketIn, null, 'marketIn', 'Продажи на Маркете')}</td>
+            </tr>`;
 
-            // 3. Строки по годам и месяцам
-            Object.keys(yearly).sort((a, b) => b - a).forEach(y => {
-                // Строка ГОДА
-    yearBody.innerHTML += `<tr onclick="toggleMonths('${y}')" style="cursor:pointer; background: rgba(102, 192, 244, 0.05);">
-    <td style="color:#66c0f4; font-weight:bold;">
-        <span onclick="event.stopPropagation(); renderAll(allData, '${y}', null)" style="border-bottom: 1px dotted #66c0f4;">${y}</span> ▾
-    </td>
-    <td style="font-weight:bold;">${fmt(yearly[y].out, y, 'out')}</td>
-    <td>${fmt(yearly[y].games, y, 'games')}</td>
-    <td>${fmt(yearly[y].gifts, y, 'gifts')}</td>
-    <td>${fmt(yearly[y].market, y, 'market')}</td>
-    <td style="color:#a4d007;">${fmt(yearly[y].marketIn, y, 'marketIn')}</td>
-</tr>`;
-
-                // Строки МЕСЯЦЕВ (скрыты по умолчанию)
-
-                if (yearly[y].months) {
-                    Object.keys(yearly[y].months).forEach(m => {
-                        const mData = yearly[y].months[m];
-                        const lowerM = m.toLowerCase();
-
-                        let saleIcon = '';
-                        let saleColor = '#888'; // Цвет по умолчанию для обычных месяцев
-
-                        // Определяем иконку и цвет в зависимости от сезона
-                        if (lowerM.includes('дек') || lowerM.includes('янв')) {
-                            saleIcon = '<span class="sale-icon">❄️</span>'; // Зимняя
-                            saleColor = '#66c0f4';
-                        } else if (lowerM.includes('мар')) {
-                            saleIcon = '<span class="sale-icon">🌱</span>'; // Весенняя
-                            saleColor = '#a4d007';
-                        } else if (lowerM.includes('июн') || lowerM.includes('июл')) {
-                            saleIcon = '<span class="sale-icon">☀️</span>'; // Летняя
-                            saleColor = '#ffb01f';
-                        } else if (lowerM.includes('окт')) {
-                            saleIcon = '<span class="sale-icon">🍂</span>'; // Осенняя
-                            saleColor = '#e9684c';
-                        }
-
-                        const isSale = saleIcon !== '';
-                        const saleClass = isSale ? 'sale-month' : '';
-
-                        yearBody.innerHTML += `<tr class="month-row-${y} ${saleClass}" style="display:none; font-size:0.85em; background: rgba(0,0,0,0.2);">
-                    <td style="padding-left: 20px; color: ${saleColor}; font-style: italic;">
-                        ${saleIcon}${m}
+            Object.keys(globalYearly).sort((a, b) => b - a).forEach(y => {
+                yearBody.innerHTML += `<tr onclick="toggleMonths('${y}')" style="cursor:pointer; background: rgba(0,0,0,0.15);">
+                    <td style="color:var(--steam-blue); font-weight:bold;">
+                        <span class="clickable-cell" onclick="event.stopPropagation(); setFilter('${y}', null, 'Год ${y}')">${y}</span> <span style="font-size:0.7em">▼</span>
                     </td>
-                    <td>${fmt(mData.out, y, 'out')}</td>
-                    <td>${fmt(mData.games, y, 'games')}</td>
-                    <td>${fmt(mData.gifts, y, 'gifts')}</td>
-                    <td>${fmt(mData.market, y, 'market')}</td>
-                    <td style="color:#a4d007; opacity: 0.8;">${fmt(mData.marketIn, y, 'marketIn')}</td>
+                    <td style="font-weight:bold;">${fmt(globalYearly[y].out, y, 'out', y + ' - Траты')}</td>
+                    <td>${fmt(globalYearly[y].games, y, 'games', y + ' - Игры')}</td>
+                    <td>${fmt(globalYearly[y].market, y, 'market', y + ' - Покупки Маркет')}</td>
+                    <td>${fmt(globalYearly[y].gifts, y, 'gifts', y + ' - Подарки')}</td>
+                    <td style="color:var(--steam-green);">${fmt(globalYearly[y].marketIn, y, 'marketIn', y + ' - Продажи Маркет')}</td>
                 </tr>`;
+
+                if (globalYearly[y].months) {
+                    Object.keys(globalYearly[y].months).forEach(m => {
+                        const mData = globalYearly[y].months[m];
+                        const lowerM = m.toLowerCase();
+                        
+                        let saleIcon = ''; let saleColor = '#888';
+                        if (lowerM.includes('дек') || lowerM.includes('янв')) { saleIcon = '❄️'; saleColor = '#66c0f4'; }
+                        else if (lowerM.includes('мар')) { saleIcon = '🌱'; saleColor = '#a4d007'; }
+                        else if (lowerM.includes('июн') || lowerM.includes('июл')) { saleIcon = '☀️'; saleColor = '#ffb01f'; }
+                        else if (lowerM.includes('окт') || lowerM.includes('ноя')) { saleIcon = '🍂'; saleColor = '#e9684c'; }
+
+                        const saleClass = saleIcon ? 'sale-month' : '';
+                        
+                        yearBody.innerHTML += `<tr class="month-row-${y} ${saleClass}" style="display:none; font-size:0.9em; background: rgba(0,0,0,0.3);">
+                            <td style="padding-left: 25px; color: ${saleColor};">
+                                <span class="sale-icon">${saleIcon}</span>${m}
+                            </td>
+                            <td>${fmt(mData.out, y, 'out', m + ' ' + y + ' - Траты')}</td>
+                            <td>${fmt(mData.games, y, 'games', m + ' ' + y + ' - Игры')}</td>
+                            <td>${fmt(mData.market, y, 'market', m + ' ' + y + ' - Покупки Маркет')}</td>
+                            <td>${fmt(mData.gifts, y, 'gifts', m + ' ' + y + ' - Подарки')}</td>
+                            <td style="color:var(--steam-green);">${fmt(mData.marketIn, y, 'marketIn', m + ' ' + y + ' - Продажи Маркет')}</td>
+                        </tr>`;
                     });
                 }
-
-
-
             });
-
-            document.getElementById('results').style.display = "block";
         }
 
-        // Добавь эту функцию вниз скрипта
         function toggleMonths(year) {
-            const rows = document.querySelectorAll(`.month-row-${year}`);
-            rows.forEach(row => {
+            document.querySelectorAll(`.month-row-${year}`).forEach(row => {
                 row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
             });
         }
 
+        function setFilter(year, cat, labelText) {
+            const filterUI = document.getElementById('activeFilter');
+            if (!year && !cat) {
+                filterUI.style.display = 'none';
+                renderHistory(allData);
+                return;
+            }
 
-        function toggleInstructions() {
-            const modal = document.getElementById('instructionsModal');
-            const overlay = document.getElementById('overlay');
-            const isVisible = modal.style.display === 'block';
-            modal.style.display = isVisible ? 'none' : 'block';
-            overlay.style.display = isVisible ? 'none' : 'block';
+            filterUI.style.display = 'inline-block';
+            filterUI.querySelector('span').innerText = labelText;
+
+            const filtered = allData.filter(item => {
+                if (!item._parsed) return false;
+                const p = item._parsed;
+                
+                if (year && p.year !== year) return false;
+                if (cat) {
+                    if (cat === 'out' && (p.isIncome || p.isTechnical)) return false;
+                    if (cat === 'games' && (p.isIncome || p.isTechnical || p.isMarket || p.isGift)) return false;
+                    if (cat === 'market' && (p.isIncome || p.isTechnical || !p.isMarket)) return false;
+                    if (cat === 'marketIn' && (!p.isIncome || p.isTechnical || !p.isMarket)) return false;
+                    if (cat === 'gifts' && (p.isIncome || p.isTechnical || !p.isGift)) return false;
+                }
+                return true;
+            });
+            renderHistory(filtered);
+            document.getElementById('activeFilter').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function copyScript() {
-            const code = document.getElementById('scriptCode').innerText;
-            navigator.clipboard.writeText(code).then(() => {
-                alert('Скрипт скопирован!');
+        function renderHistory(dataToRender) {
+            const tbody = document.getElementById('mainTable');
+            tbody.innerHTML = "";
+            
+            if (dataToRender === allData) {
+                document.getElementById('activeFilter').style.display = 'none';
+            }
+
+            dataToRender.forEach(item => {
+                if (!item._parsed) return;
+                const p = item._parsed;
+
+                let label = p.isIncome ? (p.isMarket ? "ПРОДАЖА" : "ПОПОЛНЕНИЕ") : (p.isGift ? "ПОДАРОК" : (p.isMarket ? "МАРКЕТ" : "ПОКУПКА"));
+                
+                let tagColor = p.isIncome 
+                    ? (p.isMarket ? 'var(--steam-green)' : '#5c7e10') 
+                    : (p.isGift ? 'var(--steam-purple)' : (p.isMarket ? 'var(--steam-orange)' : 'var(--steam-blue)'));
+
+                if (p.isTechnical) { label = "СИСТЕМА"; tagColor = '#444'; }
+                if (p.isRefund) { label = "ВОЗВРАТ"; tagColor = '#607d8b'; }
+
+                const content = item.transaction_link ? `<a href="${item.transaction_link}" target="_blank" style="color: var(--steam-blue); text-decoration: none;">${p.desc}</a>` : p.desc;
+                const amtClass = p.isTechnical ? '' : (p.isIncome ? 'amt-in' : 'amt-out');
+                const amtSign = p.isTechnical ? '' : (p.isIncome ? '+' : '-');
+
+                tbody.insertAdjacentHTML('beforeend', `<tr style="${p.isTechnical || p.isRefund ? 'opacity:0.5;' : ''}">
+                    <td style="padding-left: 20px;">${item.date || '-'}</td>
+                    <td><span class="tag" style="background:${tagColor}">${label}</span></td>
+                    <td><div style="max-width:500px; overflow:hidden; text-overflow:ellipsis;">${content}</div></td>
+                    <td class="${amtClass}" style="white-space:nowrap">
+                        ${amtSign}${fNum(p.amount)} <span style="font-size:0.8em">${p.currency}</span>
+                    </td>
+                    <td style="color:#888; font-size:0.85em; white-space:nowrap">
+                        ${item.wallet_balance ? fNum(parseFloat(item.wallet_balance.amount.toString().replace(',','.'))) + ' ' + (item.wallet_balance.currency || '') : '-'}
+                    </td>
+                </tr>`);
             });
         }
-
-
     </script>
 </body>
-
 </html>
