@@ -292,10 +292,12 @@
                 <div class="stat-card" style="border-left: 4px solid #5c7e10;">
                     <h4>Пополнение (RUB)</h4>
                     <div class="value" id="statTopupRUB">0</div>
+                    <div style="font-size: 0.75em; color: #888; margin-top: 5px;" id="statTopupRUBDate"></div>
                 </div>
                 <div class="stat-card" style="border-left: 4px solid #5c7e10;">
                     <h4>Пополнение (USD)</h4>
                     <div class="value" id="statTopupUSD">0</div>
+                    <div style="font-size: 0.75em; color: #888; margin-top: 5px;" id="statTopupUSDDate"></div>
                 </div>
             </div>
 
@@ -419,6 +421,8 @@
         let trackRefundUSD = 0;
         let trackTopupRUB = 0;
         let trackTopupUSD = 0;
+        let trackTopupRUBDate = null;
+        let trackTopupUSDDate = null;
 
         function analyze(data) {
             allData = data;
@@ -440,6 +444,8 @@
             trackRefundUSD = 0;
             trackTopupRUB = 0;
             trackTopupUSD = 0;
+            trackTopupRUBDate = null;
+            trackTopupUSDDate = null;
 
             data.forEach(item => {
                 const desc = Array.isArray(item.items) ? item.items.join(', ') : (item.items || "");
@@ -465,8 +471,13 @@
                     let match = desc.match(/На кошелёк переведено\s*(?:\$)?([\d.,]+)\s*(руб\.|USD)/i);
                     if (match) {
                         let val = parseFloat(match[1].replace(',', '.'));
-                        if (match[2].toUpperCase().includes('USD')) trackTopupUSD += val;
-                        else trackTopupRUB += val;
+                        if (match[2].toUpperCase().includes('USD')) {
+                            trackTopupUSD += val;
+                            if (!trackTopupUSDDate && item.date) trackTopupUSDDate = item.date;
+                        } else {
+                            trackTopupRUB += val;
+                            if (!trackTopupRUBDate && item.date) trackTopupRUBDate = item.date;
+                        }
                     }
                 }
 
@@ -540,6 +551,8 @@
             document.getElementById('statRefundRUB').innerHTML = `${fNum(trackRefundRUB)} <span class="currency">RUB</span>`;
             document.getElementById('statTopupRUB').innerHTML = `${fNum(trackTopupRUB)} <span class="currency">RUB</span>`;
             document.getElementById('statTopupUSD').innerHTML = `${fNum(trackTopupUSD)} <span class="currency">USD</span>`;
+            document.getElementById('statTopupRUBDate').innerText = trackTopupRUBDate ? `Последнее: ${trackTopupRUBDate}` : '';
+            document.getElementById('statTopupUSDDate').innerText = trackTopupUSDDate ? `Последнее: ${trackTopupUSDDate}` : '';
 
             const years = Object.keys(globalYearly).filter(y => y !== "??").sort((a,b) => a - b);
             
