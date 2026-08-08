@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Steam Finance Pro 2.2</title>
+    <title>Steam Finance Pro 2.3</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -35,7 +35,6 @@
         h1 { color: #fff; margin-bottom: 5px; }
         .subtitle { color: var(--steam-light-blue); margin-top: 0; margin-bottom: 30px; }
 
-        /* Кнопки */
         .btn {
             background: var(--steam-light-blue);
             color: #fff;
@@ -50,7 +49,6 @@
         .btn-green { background: var(--steam-green); color: #000; font-weight: bold; }
         .btn-green:hover { background: #8bb306; }
         
-        /* Зона загрузки файла */
         .upload-area {
             background: rgba(42, 71, 94, 0.4);
             border: 2px dashed var(--steam-light-blue);
@@ -68,7 +66,6 @@
         .upload-area input { display: none; }
         .upload-icon { font-size: 3em; margin-bottom: 10px; display: block; }
 
-        /* Дашборд: Карточки */
         .dashboard-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -90,7 +87,6 @@
         .stat-card .value { font-size: 1.8em; color: #fff; font-weight: bold; }
         .stat-card .currency { font-size: 0.5em; color: var(--steam-light-blue); vertical-align: middle; }
 
-        /* Графики */
         .charts-container {
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -110,7 +106,6 @@
             .charts-container { grid-template-columns: 1fr; }
         }
 
-        /* Таблицы */
         .panel {
             background: var(--bg-dark);
             padding: 20px;
@@ -128,12 +123,10 @@
         .clickable-cell { cursor: pointer; border-bottom: 1px dotted var(--steam-blue); transition: 0.2s; display: inline-block; margin-bottom: 2px;}
         .clickable-cell:hover { color: #fff; }
         
-        /* Теги и цвета текста */
         .amt-in { color: var(--steam-green); font-weight: bold; }
         .amt-out { color: var(--steam-red); }
         .tag { padding: 4px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold; color: #fff; display: inline-block; text-align: center; min-width: 70px;}
         
-        /* Модальное окно */
         #instructionsModal {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: var(--bg-dark); border: 1px solid var(--steam-blue); padding: 30px; border-radius: 12px;
@@ -145,7 +138,6 @@
         }
         code { background: #000; color: var(--steam-green); padding: 15px; display: block; border-radius: 6px; font-size: 0.85em; white-space: pre-wrap; word-wrap: break-word; max-height: 250px; overflow-y: auto; border: 1px solid #333; }
         
-        /* Легенда распродаж */
         .sale-month { background: rgba(164, 208, 7, 0.08) !important; border-left: 3px solid var(--steam-green); }
         .sale-icon { margin-right: 8px; filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); }
         
@@ -288,6 +280,23 @@
                     <h4>Всего транзакций</h4>
                     <div class="value" id="statTxCount">0</div>
                 </div>
+                <div class="stat-card" style="border-left: 4px solid #607d8b;">
+                    <h4>Возвраты (Кол-во)</h4>
+                    <div class="value" id="statRefundCount">0</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #607d8b;">
+                    <h4>Возвраты (RUB)</h4>
+                    <div class="value" id="statRefundRUB">0</div>
+                </div>
+
+                <div class="stat-card" style="border-left: 4px solid #5c7e10;">
+                    <h4>Пополнение (RUB)</h4>
+                    <div class="value" id="statTopupRUB">0</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #5c7e10;">
+                    <h4>Пополнение (USD)</h4>
+                    <div class="value" id="statTopupUSD">0</div>
+                </div>
             </div>
 
             <div class="charts-container">
@@ -305,7 +314,7 @@
                 </div>
             </div>
 
-<div class="panel">
+            <div class="panel">
                 <h3 style="margin-top: 0; color: var(--steam-blue); display: flex; justify-content: space-between; align-items: center;">
                     Сводная статистика по времени
                     <span style="font-size: 0.65em; color: #888; font-weight: normal; background: #000; padding: 4px 8px; border-radius: 4px;">
@@ -405,6 +414,12 @@
         let barChartInstance = null;
         let pieChartInstance = null;
 
+        let trackRefundCount = 0;
+        let trackRefundRUB = 0;
+        let trackRefundUSD = 0;
+        let trackTopupRUB = 0;
+        let trackTopupUSD = 0;
+
         function analyze(data) {
             allData = data;
             document.getElementById('dropZone').style.display = 'none';
@@ -419,12 +434,43 @@
         function processData(data) {
             globalOverall = { out: {}, games: {}, market: {}, gifts: {}, wallet: {}, marketIn: {} };
             globalYearly = {};
+            
+            trackRefundCount = 0;
+            trackRefundRUB = 0;
+            trackRefundUSD = 0;
+            trackTopupRUB = 0;
+            trackTopupUSD = 0;
 
             data.forEach(item => {
-                if (!item.total || item.total.amount === null) return;
-
                 const desc = Array.isArray(item.items) ? item.items.join(', ') : (item.items || "");
                 const type = (item.type || "").toLowerCase();
+                const payMethod = (item.payment_method || "").toLowerCase();
+
+                if (type === "возврат" || type.includes("возврат")) {
+                    trackRefundCount++;
+                    let amt = 0;
+                    let cur = "RUB";
+                    if (item.total && item.total.amount !== null) {
+                        amt = Math.abs(parseFloat(item.total.amount.toString().replace(/\s/g, '').replace(',', '.')));
+                        cur = (item.total.currency || "").toUpperCase().includes("USD") ? "USD" : "RUB";
+                    } else if (item.wallet_change && item.wallet_change.amount !== null) {
+                        amt = Math.abs(parseFloat(item.wallet_change.amount.toString().replace(/\s/g, '').replace(',', '.')));
+                        cur = (item.wallet_change.currency || "").toUpperCase().includes("USD") ? "USD" : "RUB";
+                    }
+                    if (cur === "USD") trackRefundUSD += amt;
+                    else trackRefundRUB += amt;
+                }
+
+                if (payMethod === "прямое пополнение") {
+                    let match = desc.match(/На кошелёк переведено\s*(?:\$)?([\d.,]+)\s*(руб\.|USD)/i);
+                    if (match) {
+                        let val = parseFloat(match[1].replace(',', '.'));
+                        if (match[2].toUpperCase().includes('USD')) trackTopupUSD += val;
+                        else trackTopupRUB += val;
+                    }
+                }
+
+                if (!item.total || item.total.amount === null) return;
 
                 const isTechnical = desc.includes("На кошелёк переведено") || type.includes("конвертация");
                 const isRefund = type.includes("возврат") || type.includes("refund");
@@ -485,11 +531,15 @@
         const fNum = (num) => num ? num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
 
         function renderDashboard() {
-            // Карточки данных
             document.getElementById('statTotalOut').innerHTML = `${fNum(globalOverall.out[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
             document.getElementById('statGames').innerHTML = `${fNum(globalOverall.games[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
             document.getElementById('statMarketIn').innerHTML = `${fNum(globalOverall.marketIn[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
             document.getElementById('statTxCount').innerText = allData.length;
+            
+            document.getElementById('statRefundCount').innerText = trackRefundCount;
+            document.getElementById('statRefundRUB').innerHTML = `${fNum(trackRefundRUB)} <span class="currency">RUB</span>`;
+            document.getElementById('statTopupRUB').innerHTML = `${fNum(trackTopupRUB)} <span class="currency">RUB</span>`;
+            document.getElementById('statTopupUSD').innerHTML = `${fNum(trackTopupUSD)} <span class="currency">USD</span>`;
 
             const years = Object.keys(globalYearly).filter(y => y !== "??").sort((a,b) => a - b);
             
@@ -501,7 +551,6 @@
             Chart.defaults.color = '#8f98a0';
             Chart.defaults.font.family = "'Segoe UI', sans-serif";
 
-            // ГРАФИК ПО ГОДАМ (Добавлен массив Игр)
             if (barChartInstance) barChartInstance.destroy();
             barChartInstance = new Chart(document.getElementById('barChart'), {
                 type: 'bar',
@@ -511,25 +560,25 @@
                         {
                             label: `Всего потрачено (${mainCurrency})`,
                             data: spendData,
-                            backgroundColor: '#ac3442', // Красный под карточку Трат
+                            backgroundColor: '#ac3442',
                             borderRadius: 4
                         },
                         {
                             label: `Игры (${mainCurrency})`,
                             data: gamesData,
-                            backgroundColor: '#66c0f4', // Голубой под карточку Игр
+                            backgroundColor: '#66c0f4',
                             borderRadius: 4
                         },
                         {
                             label: `Подарки (${mainCurrency})`,
                             data: giftsData,
-                            backgroundColor: '#84319b', // Фиолетовый под карточку подарков
+                            backgroundColor: '#84319b',
                             borderRadius: 4
                         },
                         {
                             label: `Доход с ТП (${mainCurrency})`,
                             data: incomeData,
-                            backgroundColor: '#a4d007', // Зеленый под карточку дохода
+                            backgroundColor: '#a4d007',
                             borderRadius: 4
                         }
                     ]
@@ -551,7 +600,6 @@
                 }
             });
 
-            // КРУГОВОЙ ГРАФИК СТРУКТУРЫ РАСХОДОВ
             const pieData = [
                 globalOverall.games[mainCurrency] || 0,
                 globalOverall.market[mainCurrency] || 0,
@@ -565,7 +613,7 @@
                     labels: ['Игры', 'Маркет (Покупки)', 'Подарки'],
                     datasets: [{
                         data: pieData,
-                        backgroundColor: ['#66c0f4', '#ffb01f', '#84319b'], // Голубой (Игры), Оранжевый (Маркет), Фиолетовый (Подарки)
+                        backgroundColor: ['#66c0f4', '#ffb01f', '#84319b'],
                         borderWidth: 0,
                         hoverOffset: 10
                     }]
