@@ -272,6 +272,10 @@
                     <h4>Потрачено на Игры</h4>
                     <div class="value" id="statGames">0</div>
                 </div>
+                <div class="stat-card blue">
+                    <h4>Куплено игр (шт.)</h4>
+                    <div class="value" id="statGamesCount" style="color: var(--steam-blue);">0</div>
+                </div>
                 <div class="stat-card green">
                     <h4>Доход с Торговой площадки</h4>
                     <div class="value" id="statMarketIn">0</div>
@@ -349,8 +353,9 @@
                         <thead>
                             <tr>
                                 <th style="width: 120px;">Период</th>
+								<th>Шт. Игр</th>
                                 <th>Все траты</th>
-                                <th>Игры</th>
+                                <th>Игры (Сумма)</th>
                                 <th>Внутриигровые</th>
                                 <th>Маркет (покупка)</th>
                                 <th>Подарки</th>
@@ -390,7 +395,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.7";
+        const APP_VERSION = "2.9";
         document.getElementById('app-version').innerText = APP_VERSION;
         document.getElementById('pageTitle').innerText = "Steam Finance Pro " + APP_VERSION;
 
@@ -469,7 +474,7 @@
         }
 
         function processData(data) {
-            globalOverall = { out: {}, games: {}, inGame: {}, market: {}, gifts: {}, wallet: {}, marketIn: {} };
+            globalOverall = { out: {}, games: {}, inGame: {}, market: {}, gifts: {}, wallet: {}, marketIn: {}, gamesCount: 0 };
             globalYearly = {};
             giftRecipients = {};
             
@@ -486,6 +491,21 @@
                 const type = (item.type || "").toLowerCase();
                 const originalPayMethod = item.payment_method || "";
                 const payMethod = originalPayMethod.toLowerCase();
+                
+                const dlcKeywords = ['pack', 'season pass', 'soundtrack', 'supporter pack', 'costume pack', 'paint jobs pack', 'skin', 'dlc', 'dlc row', 'dlc1', 'dlc2', 'dlc3', 'legend pack'];
+                let itemsCount = 0;
+                let itemsArray = Array.isArray(item.items) ? item.items : (item.items ? [item.items] : []);
+                
+                if (itemsArray.length === 0) {
+                    itemsCount = 1;
+                } else {
+                    itemsArray.forEach(itemName => {
+                        const lower = itemName.toLowerCase();
+                        if (!dlcKeywords.some(kw => lower.includes(kw))) {
+                            itemsCount++;
+                        }
+                    });
+                }
                 
                 let giftRecipientName = "";
                 if (payMethod.startsWith("подарок отправлен ")) {
@@ -547,10 +567,10 @@
 
                 if (!isTechnical) {
                     if (!globalYearly[itemYear]) {
-                        globalYearly[itemYear] = { out: {}, games: {}, inGame: {}, market: {}, gifts: {}, wallet: {}, marketIn: {}, months: {} };
+                        globalYearly[itemYear] = { out: {}, games: {}, inGame: {}, market: {}, gifts: {}, wallet: {}, marketIn: {}, months: {}, gamesCount: 0 };
                     }
                     if (!globalYearly[itemYear].months[itemMonth]) {
-                        globalYearly[itemYear].months[itemMonth] = { out: {}, games: {}, inGame: {}, market: {}, gifts: {}, wallet: {}, marketIn: {} };
+                        globalYearly[itemYear].months[itemMonth] = { out: {}, games: {}, inGame: {}, market: {}, gifts: {}, wallet: {}, marketIn: {}, gamesCount: 0 };
                     }
 
                     const update = (obj, val) => { obj[currency] = (obj[currency] || 0) + val; };
@@ -562,17 +582,31 @@
 
                     if (isRefund) {
                         record('out', -amount);
-                        if (isInGame) record('inGame', -amount);
-                        else record('games', -amount);
+                        if (isInGame) {
+                            record('inGame', -amount);
+                        } else {
+                            record('games', -amount);
+                            globalOverall.gamesCount -= itemsCount;
+                            globalYearly[itemYear].gamesCount -= itemsCount;
+                            globalYearly[itemYear].months[itemMonth].gamesCount -= itemsCount;
+                        }
                     } else if (isIncome) {
                         if (isMarket) record('marketIn', amount);
                         else record('wallet', amount);
                     } else {
                         record('out', amount);
-                        if (isGift) record('gifts', amount);
-                        else if (isMarket) record('market', amount);
-                        else if (isInGame) record('inGame', amount);
-                        else record('games', amount);
+                        if (isGift) {
+                            record('gifts', amount);
+                        } else if (isMarket) {
+                            record('market', amount);
+                        } else if (isInGame) {
+                            record('inGame', amount);
+                        } else {
+                            record('games', amount);
+                            globalOverall.gamesCount += itemsCount;
+                            globalYearly[itemYear].gamesCount += itemsCount;
+                            globalYearly[itemYear].months[itemMonth].gamesCount += itemsCount;
+                        }
                     }
                 }
             });
@@ -588,6 +622,7 @@
         function renderDashboard() {
             document.getElementById('statTotalOut').innerHTML = `${fNum(globalOverall.out[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
             document.getElementById('statGames').innerHTML = `${fNum(globalOverall.games[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
+            document.getElementById('statGamesCount').innerText = "~" + (globalOverall.gamesCount || 0);
             document.getElementById('statMarketIn').innerHTML = `${fNum(globalOverall.marketIn[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
             document.getElementById('statTxCount').innerText = allData.length;
             
@@ -609,6 +644,7 @@
             const gamesData = years.map(y => globalYearly[y].games[mainCurrency] || 0);
             const giftsData = years.map(y => globalYearly[y].gifts[mainCurrency] || 0);
             const incomeData = years.map(y => globalYearly[y].marketIn[mainCurrency] || 0);
+            const gamesCountData = years.map(y => globalYearly[y].gamesCount || 0);
             
             Chart.defaults.color = '#8f98a0';
             Chart.defaults.font.family = "'Segoe UI', sans-serif";
@@ -623,25 +659,41 @@
                             label: `Всего потрачено (${mainCurrency})`,
                             data: spendData,
                             backgroundColor: '#ac3442',
-                            borderRadius: 4
+                            borderRadius: 4,
+                            yAxisID: 'y'
                         },
                         {
                             label: `Игры (${mainCurrency})`,
                             data: gamesData,
                             backgroundColor: '#66c0f4',
-                            borderRadius: 4
+                            borderRadius: 4,
+                            yAxisID: 'y'
                         },
                         {
                             label: `Подарки (${mainCurrency})`,
                             data: giftsData,
                             backgroundColor: '#84319b',
-                            borderRadius: 4
+                            borderRadius: 4,
+                            yAxisID: 'y'
                         },
                         {
                             label: `Доход с ТП (${mainCurrency})`,
                             data: incomeData,
                             backgroundColor: '#a4d007',
-                            borderRadius: 4
+                            borderRadius: 4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: `~ Куплено игр (шт.)`,
+                            data: gamesCountData,
+                            type: 'line',
+                            borderColor: '#fff',
+                            backgroundColor: '#fff',
+                            pointBackgroundColor: '#fff',
+                            tension: 0.3,
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            yAxisID: 'y1'
                         }
                     ]
                 },
@@ -656,7 +708,19 @@
                         tooltip: { mode: 'index', intersect: false }
                     }, 
                     scales: { 
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' } }, 
+                        y: { 
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { color: 'rgba(255,255,255,0.05)' } 
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { display: false },
+                            ticks: { color: '#fff', stepSize: 1 },
+                        },
                         x: { grid: { display: false } } 
                     } 
                 }
@@ -685,7 +749,7 @@
             });
         }
 
-        function renderSummaryTable() {
+function renderSummaryTable() {
             const fmt = (obj, year, cat, label) => {
                 const text = Object.entries(obj).map(([c, v]) => `<div>${fNum(v)} <small style="color:#888">${c}</small></div>`).join('') || "—";
                 return `<div class="clickable-cell" onclick="event.stopPropagation(); setFilter('${year || ''}', '${cat || ''}', '${label}')" title="Нажмите, чтобы отфильтровать операции">${text}</div>`;
@@ -696,6 +760,7 @@
 
             yearBody.innerHTML += `<tr class="total-row">
                 <td onclick="setFilter('','', 'Все время')" style="cursor:pointer; color:var(--steam-blue);">ВСЁ ВРЕМЯ</td>
+                <td style="font-weight:bold; color:var(--steam-blue); text-align:center;">~${globalOverall.gamesCount || 0}</td>
                 <td>${fmt(globalOverall.out, null, 'out', 'Все траты')}</td>
                 <td>${fmt(globalOverall.games, null, 'games', 'Покупка игр')}</td>
                 <td>${fmt(globalOverall.inGame, null, 'inGame', 'Внутриигровые')}</td>
@@ -709,6 +774,7 @@
                     <td style="color:var(--steam-blue); font-weight:bold;">
                         <span class="clickable-cell" onclick="event.stopPropagation(); setFilter('${y}', null, 'Год ${y}')">${y}</span> <span style="font-size:0.7em">▼</span>
                     </td>
+                    <td style="font-weight:bold; color:var(--steam-blue); text-align:center;">~${globalYearly[y].gamesCount || 0}</td>
                     <td style="font-weight:bold;">${fmt(globalYearly[y].out, y, 'out', y + ' - Траты')}</td>
                     <td>${fmt(globalYearly[y].games, y, 'games', y + ' - Игры')}</td>
                     <td>${fmt(globalYearly[y].inGame, y, 'inGame', y + ' - Внутриигровые')}</td>
@@ -734,6 +800,7 @@
                             <td style="padding-left: 25px; color: ${saleColor};">
                                 <span class="sale-icon">${saleIcon}</span>${m}
                             </td>
+                            <td style="color:var(--steam-blue); text-align:center;">~${mData.gamesCount || 0}</td>
                             <td>${fmt(mData.out, y, 'out', m + ' ' + y + ' - Траты')}</td>
                             <td>${fmt(mData.games, y, 'games', m + ' ' + y + ' - Игры')}</td>
                             <td>${fmt(mData.inGame, y, 'inGame', m + ' ' + y + ' - Внутриигровые')}</td>
