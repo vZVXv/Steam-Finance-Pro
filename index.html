@@ -141,7 +141,7 @@
         .sale-month { background: rgba(164, 208, 7, 0.08) !important; border-left: 3px solid var(--steam-green); }
         .sale-icon { margin-right: 8px; filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); }
         
-        .filter-status { background: var(--steam-blue); color: var(--bg-dark); padding: 5px 10px; border-radius: 4px; font-size: 0.85em; font-weight: bold; margin-bottom: 15px; display: inline-block; cursor: pointer;}
+        .filter-status { background: var(--steam-blue); color: var(--bg-dark); padding: 5px 10px; border-radius: 4px; font-size: 0.85em; font-weight: bold; display: inline-block; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -302,10 +302,15 @@
                     <div class="value" id="statTopupUSD">0</div>
                     <div style="font-size: 0.75em; color: #888; margin-top: 5px;" id="statTopupUSDDate"></div>
                 </div>
+                <div class="stat-card" style="border-left: 4px solid #5c7e10;">
+                    <h4>Пополнения (Кол-во)</h4>
+                    <div class="value" id="statTopupCount">0</div>
+                </div>
             </div>
 
             <div class="charts-container">
                 <div class="chart-box">
+                    <button class="btn" style="position: absolute; right: 20px; top: 15px; font-size: 0.75em; padding: 4px 8px; z-index: 10;" onclick="toggleChartMode()">Переключить вид</button>
                     <h4 style="margin-top: 0; color: var(--steam-blue);">Динамика операций по годам</h4>
                     <div style="position: relative; height: 300px; width: 100%;">
                         <canvas id="barChart"></canvas>
@@ -319,15 +324,7 @@
                 </div>
             </div>
 
-            <div class="panel">
-                <h3 onclick="toggleSection('topGiftsContent', 'topGiftsToggleIcon')" style="margin-top: 0; color: var(--steam-purple); cursor: pointer; user-select: none;">
-                    Топ получателей подарков <span id="topGiftsToggleIcon" style="font-size: 0.8em; margin-left: 5px;">▼</span>
-                </h3>
-                <div id="topGiftsContent" style="display: none; margin-top: 20px;">
-                    <div id="statTopGifts" style="font-size: 1em; line-height: 1.6;"></div>
-                </div>
-            </div>
-
+            <!-- Сводная статистика по времени -->
             <div class="panel">
                 <h3 onclick="toggleSection('summaryContent', 'summaryToggleIcon')" style="margin-top: 0; color: var(--steam-blue); display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
                     <span>Сводная статистика по времени <span id="summaryToggleIcon" style="font-size: 0.8em; margin-left: 5px;">▼</span></span>
@@ -353,7 +350,7 @@
                         <thead>
                             <tr>
                                 <th style="width: 120px;">Период</th>
-								<th>Шт. Игр</th>
+                                <th>Шт. Игр</th>
                                 <th>Все траты</th>
                                 <th>Игры (Сумма)</th>
                                 <th>Внутриигровые</th>
@@ -367,35 +364,47 @@
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
-                <h3 onclick="toggleSection('historyContent', 'historyToggleIcon')" style="color: var(--steam-blue); margin: 0; cursor: pointer; user-select: none;">
-                    Детальная история <span id="historyToggleIcon" style="font-size: 0.8em; margin-left: 5px;">▼</span>
+            <!-- Детальная история (приведена к абсолютно единому стилю с другими панелями) -->
+            <div class="panel">
+                <h3 onclick="toggleSection('historyContent', 'historyToggleIcon')" style="margin-top: 0; color: var(--steam-blue); display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+                    <span>Детальная история <span id="historyToggleIcon" style="font-size: 0.8em; margin-left: 5px;">▼</span></span>
+                    <div id="activeFilter" class="filter-status" style="display: none;" onclick="event.stopPropagation(); renderHistory(allData)">
+                        Показан фильтр: <span></span> ✖ (Сбросить)
+                    </div>
                 </h3>
-                <div id="activeFilter" class="filter-status" style="display: none;" onclick="renderHistory(allData)">
-                    Показан фильтр: <span></span> ✖ (Сбросить)
+                
+                <div id="historyContent" style="display: none; margin-top: 20px;">
+                    <table style="margin: 0;">
+                        <thead style="background: #000; position: sticky; top: 0; z-index: 2;">
+                            <tr>
+                                <th style="padding-left: 20px;">Дата</th>
+                                <th>Тип</th>
+                                <th>Операция</th>
+                                <th>Кому</th>
+                                <th>Сумма</th>
+                                <th>Баланс</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mainTable"></tbody>
+                    </table>
                 </div>
             </div>
-            
-            <div class="panel" id="historyContent" style="padding: 0; display: none;">
-                <table style="margin: 0;">
-                    <thead style="background: #000; position: sticky; top: 0;">
-                        <tr>
-                            <th style="padding-left: 20px;">Дата</th>
-                            <th>Тип</th>
-                            <th>Операция</th>
-                            <th>Кому</th>
-                            <th>Сумма</th>
-                            <th>Баланс</th>
-                        </tr>
-                    </thead>
-                    <tbody id="mainTable"></tbody>
-                </table>
+
+            <!-- Топ получателей подарков -->
+            <div class="panel">
+                <h3 onclick="toggleSection('topGiftsContent', 'topGiftsToggleIcon')" style="margin-top: 0; color: var(--steam-purple); cursor: pointer; user-select: none;">
+                    Топ получателей подарков <span id="topGiftsToggleIcon" style="font-size: 0.8em; margin-left: 5px;">▼</span>
+                </h3>
+                <div id="topGiftsContent" style="display: none; margin-top: 20px;">
+                    <div id="statTopGifts" style="font-size: 1em; line-height: 1.6;"></div>
+                </div>
             </div>
+
         </div>
     </div>
 
     <script>
-        const APP_VERSION = "2.9";
+        const APP_VERSION = "3.1";
         document.getElementById('app-version').innerText = APP_VERSION;
         document.getElementById('pageTitle').innerText = "Steam Finance Pro " + APP_VERSION;
 
@@ -452,14 +461,21 @@
         let mainCurrency = "RUB";
         let barChartInstance = null;
         let pieChartInstance = null;
+        let chartMode = 'bar';
 
         let trackRefundCount = 0;
         let trackRefundRUB = 0;
         let trackRefundUSD = 0;
         let trackTopupRUB = 0;
         let trackTopupUSD = 0;
+        let trackTopupCount = 0;
         let trackTopupRUBDate = null;
         let trackTopupUSDDate = null;
+
+        function toggleChartMode() {
+            chartMode = chartMode === 'bar' ? 'line' : 'bar';
+            renderDashboard();
+        }
 
         function analyze(data) {
             allData = data;
@@ -483,6 +499,7 @@
             trackRefundUSD = 0;
             trackTopupRUB = 0;
             trackTopupUSD = 0;
+            trackTopupCount = 0;
             trackTopupRUBDate = null;
             trackTopupUSDDate = null;
 
@@ -492,6 +509,10 @@
                 const originalPayMethod = item.payment_method || "";
                 const payMethod = originalPayMethod.toLowerCase();
                 
+                if (desc.includes("На кошелёк переведено")) {
+                    trackTopupCount++;
+                }
+
                 const dlcKeywords = ['pack', 'season pass', 'soundtrack', 'supporter pack', 'costume pack', 'paint jobs pack', 'skin', 'dlc', 'dlc row', 'dlc1', 'dlc2', 'dlc3', 'legend pack'];
                 let itemsCount = 0;
                 let itemsArray = Array.isArray(item.items) ? item.items : (item.items ? [item.items] : []);
@@ -635,6 +656,7 @@
             document.getElementById('statRefundRUB').innerHTML = `${fNum(trackRefundRUB)} <span class="currency">RUB</span>`;
             document.getElementById('statTopupRUB').innerHTML = `${fNum(trackTopupRUB)} <span class="currency">RUB</span>`;
             document.getElementById('statTopupUSD').innerHTML = `${fNum(trackTopupUSD)} <span class="currency">USD</span>`;
+            document.getElementById('statTopupCount').innerText = trackTopupCount;
             document.getElementById('statTopupRUBDate').innerText = trackTopupRUBDate ? `Последнее: ${trackTopupRUBDate}` : '';
             document.getElementById('statTopupUSDDate').innerText = trackTopupUSDDate ? `Последнее: ${trackTopupUSDDate}` : '';
 
@@ -650,6 +672,15 @@
             Chart.defaults.font.family = "'Segoe UI', sans-serif";
 
             if (barChartInstance) barChartInstance.destroy();
+
+            const commonLineOpts = chartMode === 'line' ? {
+                type: 'line',
+                tension: 0.3,
+                borderWidth: 2,
+                pointRadius: 4,
+                fill: false
+            } : {};
+
             barChartInstance = new Chart(document.getElementById('barChart'), {
                 type: 'bar',
                 data: {
@@ -659,29 +690,37 @@
                             label: `Всего потрачено (${mainCurrency})`,
                             data: spendData,
                             backgroundColor: '#ac3442',
+                            borderColor: '#ac3442',
                             borderRadius: 4,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            ...commonLineOpts
                         },
                         {
                             label: `Игры (${mainCurrency})`,
                             data: gamesData,
                             backgroundColor: '#66c0f4',
+                            borderColor: '#66c0f4',
                             borderRadius: 4,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            ...commonLineOpts
                         },
                         {
                             label: `Подарки (${mainCurrency})`,
                             data: giftsData,
                             backgroundColor: '#84319b',
+                            borderColor: '#84319b',
                             borderRadius: 4,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            ...commonLineOpts
                         },
                         {
                             label: `Доход с ТП (${mainCurrency})`,
                             data: incomeData,
                             backgroundColor: '#a4d007',
+                            borderColor: '#a4d007',
                             borderRadius: 4,
-                            yAxisID: 'y'
+                            yAxisID: 'y',
+                            ...commonLineOpts
                         },
                         {
                             label: `~ Куплено игр (шт.)`,
@@ -699,7 +738,8 @@
                 },
                 options: { 
                     responsive: true, 
-                    maintainAspectRatio: false, 
+                    maintainAspectRatio: false,
+                    animation: false, 
                     plugins: { 
                         legend: { 
                             display: true, 
@@ -749,7 +789,7 @@
             });
         }
 
-function renderSummaryTable() {
+        function renderSummaryTable() {
             const fmt = (obj, year, cat, label) => {
                 const text = Object.entries(obj).map(([c, v]) => `<div>${fNum(v)} <small style="color:#888">${c}</small></div>`).join('') || "—";
                 return `<div class="clickable-cell" onclick="event.stopPropagation(); setFilter('${year || ''}', '${cat || ''}', '${label}')" title="Нажмите, чтобы отфильтровать операции">${text}</div>`;
