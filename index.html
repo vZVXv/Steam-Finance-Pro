@@ -93,6 +93,14 @@
             gap: 20px;
             margin-bottom: 25px;
         }
+
+        .split-panels {
+            display: grid;
+            grid-template-columns: 1fr 2fr; /* Изменено с 1fr 1fr на 1fr 2fr (левая колонка занимает 1/3) */
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
         .chart-box {
             background: var(--bg-dark);
             padding: 20px;
@@ -104,6 +112,7 @@
         
         @media (max-width: 900px) {
             .charts-container { grid-template-columns: 1fr; }
+            .split-panels { grid-template-columns: 1fr; }
         }
 
         .panel {
@@ -243,7 +252,7 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    console.log("✅ Готово! Данные строго типизированы, очищены от мусора и сохранены в файл.");
+    console.log("Готово! Данные строго типизированы, очищены от мусора и сохранены в файл.");
     return data;
 })();
             </code>
@@ -388,12 +397,23 @@
                 </div>
             </div>
 
-            <div class="panel">
-                <h3 onclick="toggleSection('topGiftsContent', 'topGiftsToggleIcon')" style="margin-top: 0; color: var(--steam-purple); cursor: pointer; user-select: none;">
-                    Топ получателей подарков <span id="topGiftsToggleIcon" style="font-size: 0.8em; margin-left: 5px;">▼</span>
-                </h3>
-                <div id="topGiftsContent" style="display: none; margin-top: 20px;">
-                    <div id="statTopGifts" style="font-size: 1em; line-height: 1.6;"></div>
+            <div class="split-panels">
+                <div class="panel" style="margin-bottom: 0;">
+                    <h3 style="margin-top: 0; color: var(--steam-purple); user-select: none;">
+                        Топ получателей подарков
+                    </h3>
+                    <div id="topGiftsContent" style="display: block; margin-top: 20px;">
+                        <div id="statTopGifts" style="font-size: 1em; line-height: 1.6;"></div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-bottom: 0;">
+                    <h3 style="margin-top: 0; color: var(--steam-orange); user-select: none;">
+                        Топ 5 дорогих покупок по годам
+                    </h3>
+                    <div id="topPurchasesContent" style="display: block; margin-top: 20px;">
+                        <div id="statTopPurchases" style="font-size: 1em; line-height: 1.6;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -401,7 +421,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "3.2";
+        const APP_VERSION = "3.7";
         document.getElementById('app-version').innerText = APP_VERSION;
         document.getElementById('pageTitle').innerText = "Steam Finance Pro " + APP_VERSION;
 
@@ -455,6 +475,7 @@
         let globalOverall = {};
         let globalYearly = {};
         let giftRecipients = {};
+        let topPurchasesByYear = {};
         let mainCurrency = "RUB";
         let barChartInstance = null;
         let pieChartInstance = null;
@@ -490,6 +511,7 @@
             globalOverall = { out: {}, games: {}, inGame: {}, market: {}, gifts: {}, wallet: {}, marketIn: {}, gamesCount: 0 };
             globalYearly = {};
             giftRecipients = {};
+            topPurchasesByYear = {};
             
             trackRefundCount = 0;
             trackRefundRUB = 0;
@@ -500,7 +522,29 @@
             trackTopupRUBDate = null;
             trackTopupUSDDate = null;
 
+            let refundedLinks = new Set();
+            let refundedFallbacks = [];
             data.forEach(item => {
+                const type = (item.type || "").toLowerCase();
+                if (type === "возврат" || type.includes("возврат") || type.includes("refund")) {
+                    if (item.transaction_link) {
+                        refundedLinks.add(item.transaction_link);
+                    } else {
+                        const desc = Array.isArray(item.items) ? item.items.join(', ') : (item.items || "");
+                        let amount = 0;
+                        if (item.total && item.total.amount !== null) {
+                            amount = Math.abs(parseFloat(item.total.amount.toString().replace(/\s/g, '').replace(',', '.')));
+                        } else if (item.wallet_change && item.wallet_change.amount !== null) {
+                            amount = Math.abs(parseFloat(item.wallet_change.amount.toString().replace(/\s/g, '').replace(',', '.')));
+                        }
+                        if (desc && amount > 0) {
+                            refundedFallbacks.push({desc, amount});
+                        }
+                    }
+                }
+            });
+
+            data.forEach((item, index) => {
                 const desc = Array.isArray(item.items) ? item.items.join(', ') : (item.items || "");
                 const type = (item.type || "").toLowerCase();
                 const originalPayMethod = item.payment_method || "";
@@ -530,13 +574,13 @@
                     giftRecipientName = originalPayMethod.substring(18).trim();
                     if (!giftRecipients[giftRecipientName]) giftRecipients[giftRecipientName] = { count: 0, amount: 0, currency: "" };
                     giftRecipients[giftRecipientName].count += 1;
-                    if (item.total && item.total.amount !== null && !(type === "возврат" || type.includes("возврат"))) {
+                    if (item.total && item.total.amount !== null && !(type === "возврат" || type.includes("возврат") || type.includes("refund"))) {
                         giftRecipients[giftRecipientName].amount += Math.abs(parseFloat(item.total.amount.toString().replace(/\s/g, '').replace(',', '.')));
                         giftRecipients[giftRecipientName].currency = (item.total.currency || "RUB").replace(" Кредит", "").trim();
                     }
                 }
 
-                if (type === "возврат" || type.includes("возврат")) {
+                if (type === "возврат" || type.includes("возврат") || type.includes("refund")) {
                     trackRefundCount++;
                     let amt = 0;
                     let cur = "RUB";
@@ -586,7 +630,27 @@
                 const dateParts = item.date ? item.date.split(' ') : [];
                 const itemMonth = dateParts.length >= 2 ? dateParts[1].replace(',', '') : "Прочее";
 
-                item._parsed = { isTechnical, isRefund, isIncome, isMarket, isGift, isInGame, amount, currency, year: itemYear, month: itemMonth, desc, giftRecipient: giftRecipientName };
+                let isRefundedPurchase = false;
+                if (!isRefund && !isTechnical && !isIncome) {
+                    if (item.transaction_link && refundedLinks.has(item.transaction_link)) {
+                        isRefundedPurchase = true;
+                    } else {
+                        const fIndex = refundedFallbacks.findIndex(f => f.desc === desc && f.amount === amount);
+                        if (fIndex !== -1) {
+                            isRefundedPurchase = true;
+                            refundedFallbacks.splice(fIndex, 1);
+                        }
+                    }
+                }
+
+                item._parsed = { isTechnical, isRefund, isIncome, isMarket, isGift, isInGame, amount, currency, year: itemYear, month: itemMonth, desc, giftRecipient: giftRecipientName, rawItemsCount: itemsArray.length, isRefundedPurchase, originalIndex: index };
+
+                if (!isTechnical && !isRefund && !isIncome && !isRefundedPurchase && !isInGame && !isGift) {
+                    if (!topPurchasesByYear[itemYear]) {
+                        topPurchasesByYear[itemYear] = [];
+                    }
+                    topPurchasesByYear[itemYear].push(item._parsed);
+                }
 
                 if (!isTechnical) {
                     if (!globalYearly[itemYear]) {
@@ -651,8 +715,27 @@
             
             const sortedGifts = Object.entries(giftRecipients).sort((a, b) => b[1].amount - a[1].amount);
             document.getElementById('statTopGifts').innerHTML = sortedGifts.length > 0 
-                ? sortedGifts.map(g => `<div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.1);padding:8px 0;"><span>${g[0]}</span><span style="color:var(--steam-blue); font-weight:bold;">${g[1].count} шт. / ${fNum(g[1].amount)} ${g[1].currency}</span></div>`).join('')
+                ? sortedGifts.map(g => `<div style="display:flex;align-items:center;border-bottom:1px solid rgba(255,255,255,0.1);padding:8px 0;"><span style="color:var(--steam-blue); font-weight:bold; min-width: 120px;">${fNum(g[1].amount)} ${g[1].currency}</span><span style="margin-right:15px; color:#aaa; font-size:0.9em;">(${g[1].count} шт.)</span><span style="flex:1;">${g[0]}</span></div>`).join('')
                 : '<span style="color:#888;">Нет данных</span>';
+
+            let topPurchasesHTML = '';
+            Object.keys(topPurchasesByYear).sort((a, b) => b - a).forEach(year => {
+                if (year === "??") return;
+                let top5 = topPurchasesByYear[year].sort((a, b) => b.amount - a.amount).slice(0, 5);
+                if (top5.length > 0) {
+                    topPurchasesHTML += `<h4 style="color: var(--steam-orange); margin-top: 15px; margin-bottom: 5px;">${year} год</h4>`;
+                    top5.forEach((p, idx) => {
+                        let note = p.rawItemsCount > 1 ? `<span style="font-size: 0.8em; color: #888;"> (не уникальная покупка, товаров: ${p.rawItemsCount})</span>` : '';
+                        let descText = p.desc ? p.desc : '<span style="color:#888; font-style:italic;">Без названия</span>';
+                        topPurchasesHTML += `<div style="display:flex; align-items:flex-start; border-bottom:1px solid rgba(255,255,255,0.1); padding:8px 0; gap: 15px;">
+                            <span style="white-space: nowrap; color:var(--steam-red); font-weight:bold; min-width: 100px;">${fNum(p.amount)} ${p.currency}</span>
+                            <span style="flex:1; line-height: 1.4; word-break: break-word;">${idx + 1}. ${descText}${note}</span>
+                            <button class="btn" style="padding: 2px 8px; font-size: 0.8em; background: rgba(102,192,244,0.2); color: var(--steam-blue); flex-shrink: 0;" onclick="showSingleTransaction(${p.originalIndex})" title="Показать в детальной истории">🔍</button>
+                        </div>`;
+                    });
+                }
+            });
+            document.getElementById('statTopPurchases').innerHTML = topPurchasesHTML || '<span style="color:#888;">Нет данных</span>';
 
             document.getElementById('statRefundCount').innerText = trackRefundCount;
             document.getElementById('statRefundRUB').innerHTML = `${fNum(trackRefundRUB)} <span class="currency">RUB</span>`;
@@ -899,6 +982,23 @@
             document.getElementById('activeFilter').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        function showSingleTransaction(index) {
+            const filterUI = document.getElementById('activeFilter');
+            const historyContent = document.getElementById('historyContent');
+            const historyIcon = document.getElementById('historyToggleIcon');
+            
+            if (historyContent.style.display === 'none') {
+                historyContent.style.display = 'block';
+                if (historyIcon) historyIcon.innerText = '▲';
+            }
+
+            filterUI.style.display = 'inline-block';
+            filterUI.querySelector('span').innerText = "Поиск конкретной операции";
+
+            renderHistory([allData[index]]);
+            document.getElementById('activeFilter').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function renderHistory(dataToRender) {
             const tbody = document.getElementById('mainTable');
             tbody.innerHTML = "";
@@ -922,15 +1022,17 @@
                 if (p.isTechnical) { label = "СИСТЕМА"; tagColor = '#444'; }
                 if (p.isRefund) { label = "ВОЗВРАТ"; tagColor = '#607d8b'; }
 
-                const content = item.transaction_link ? `<a href="${item.transaction_link}" target="_blank" style="color: var(--steam-blue); text-decoration: none;">${p.desc}</a>` : p.desc;
+                const descStyle = p.isRefundedPurchase ? 'text-decoration: line-through;' : 'text-decoration: none;';
+                const displayDesc = p.desc ? p.desc : '<span style="color:#888; font-style:italic;">Без названия</span>';
+                const content = item.transaction_link ? `<a href="${item.transaction_link}" target="_blank" style="color: var(--steam-blue); ${descStyle}">${displayDesc}</a>` : `<span style="${descStyle}">${displayDesc}</span>`;
                 const amtClass = p.isTechnical ? '' : (p.isIncome ? 'amt-in' : 'amt-out');
                 const amtSign = p.isTechnical ? '' : (p.isIncome ? '+' : '-');
                 const recipientTd = p.giftRecipient ? `<span style="color: var(--steam-purple); font-weight: bold;">${p.giftRecipient}</span>` : '<span style="color: #444;">-</span>';
 
-                tbody.insertAdjacentHTML('beforeend', `<tr style="${p.isTechnical || p.isRefund ? 'opacity:0.5;' : ''}">
+                tbody.insertAdjacentHTML('beforeend', `<tr style="${p.isTechnical || p.isRefund || p.isRefundedPurchase ? 'opacity:0.5;' : ''}">
                     <td style="padding-left: 20px;">${item.date || '-'}</td>
                     <td><span class="tag" style="background:${tagColor}">${label}</span></td>
-                    <td><div style="max-width:500px; overflow:hidden; text-overflow:ellipsis;">${content}</div></td>
+                    <td><div style="max-width:500px; word-break: break-word;">${content}</div></td>
                     <td>${recipientTd}</td>
                     <td class="${amtClass}" style="white-space:nowrap">
                         ${amtSign}${fNum(p.amount)} <span style="font-size:0.8em">${p.currency}</span>
