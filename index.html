@@ -324,7 +324,6 @@
                 </div>
             </div>
 
-            <!-- Сводная статистика по времени -->
             <div class="panel">
                 <h3 onclick="toggleSection('summaryContent', 'summaryToggleIcon')" style="margin-top: 0; color: var(--steam-blue); display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
                     <span>Сводная статистика по времени <span id="summaryToggleIcon" style="font-size: 0.8em; margin-left: 5px;">▼</span></span>
@@ -364,7 +363,6 @@
                 </div>
             </div>
 
-            <!-- Детальная история (приведена к абсолютно единому стилю с другими панелями) -->
             <div class="panel">
                 <h3 onclick="toggleSection('historyContent', 'historyToggleIcon')" style="margin-top: 0; color: var(--steam-blue); display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
                     <span>Детальная история <span id="historyToggleIcon" style="font-size: 0.8em; margin-left: 5px;">▼</span></span>
@@ -390,7 +388,6 @@
                 </div>
             </div>
 
-            <!-- Топ получателей подарков -->
             <div class="panel">
                 <h3 onclick="toggleSection('topGiftsContent', 'topGiftsToggleIcon')" style="margin-top: 0; color: var(--steam-purple); cursor: pointer; user-select: none;">
                     Топ получателей подарков <span id="topGiftsToggleIcon" style="font-size: 0.8em; margin-left: 5px;">▼</span>
@@ -404,7 +401,7 @@
     </div>
 
     <script>
-        const APP_VERSION = "3.1";
+        const APP_VERSION = "3.2";
         document.getElementById('app-version').innerText = APP_VERSION;
         document.getElementById('pageTitle').innerText = "Steam Finance Pro " + APP_VERSION;
 
@@ -531,7 +528,12 @@
                 let giftRecipientName = "";
                 if (payMethod.startsWith("подарок отправлен ")) {
                     giftRecipientName = originalPayMethod.substring(18).trim();
-                    giftRecipients[giftRecipientName] = (giftRecipients[giftRecipientName] || 0) + 1;
+                    if (!giftRecipients[giftRecipientName]) giftRecipients[giftRecipientName] = { count: 0, amount: 0, currency: "" };
+                    giftRecipients[giftRecipientName].count += 1;
+                    if (item.total && item.total.amount !== null && !(type === "возврат" || type.includes("возврат"))) {
+                        giftRecipients[giftRecipientName].amount += Math.abs(parseFloat(item.total.amount.toString().replace(/\s/g, '').replace(',', '.')));
+                        giftRecipients[giftRecipientName].currency = (item.total.currency || "RUB").replace(" Кредит", "").trim();
+                    }
                 }
 
                 if (type === "возврат" || type.includes("возврат")) {
@@ -647,9 +649,9 @@
             document.getElementById('statMarketIn').innerHTML = `${fNum(globalOverall.marketIn[mainCurrency])} <span class="currency">${mainCurrency}</span>`;
             document.getElementById('statTxCount').innerText = allData.length;
             
-            const sortedGifts = Object.entries(giftRecipients).sort((a, b) => b[1] - a[1]);
+            const sortedGifts = Object.entries(giftRecipients).sort((a, b) => b[1].amount - a[1].amount);
             document.getElementById('statTopGifts').innerHTML = sortedGifts.length > 0 
-                ? sortedGifts.map(g => `<div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.1);padding:8px 0;"><span>${g[0]}</span><span style="color:var(--steam-blue); font-weight:bold;">${g[1]} шт.</span></div>`).join('')
+                ? sortedGifts.map(g => `<div style="display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.1);padding:8px 0;"><span>${g[0]}</span><span style="color:var(--steam-blue); font-weight:bold;">${g[1].count} шт. / ${fNum(g[1].amount)} ${g[1].currency}</span></div>`).join('')
                 : '<span style="color:#888;">Нет данных</span>';
 
             document.getElementById('statRefundCount').innerText = trackRefundCount;
