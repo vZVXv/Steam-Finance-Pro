@@ -448,11 +448,62 @@
     </div>
 
     <script>
-        const APP_VERSION = "3.8";
+        const APP_VERSION = "3.9";
         document.getElementById('app-version').innerText = APP_VERSION;
         document.getElementById('pageTitle').innerText = "Steam Finance Pro " + APP_VERSION;
 
         let currentLang = 'ru';
+
+        function translateMonth(monthStr, lang) {
+            if (!monthStr) return monthStr;
+            let cleanStr = monthStr.trim();
+            let isDot = cleanStr.endsWith('.');
+            let key = cleanStr.replace(/\.$/, '').toLowerCase();
+
+            const monthMap = {
+                'янв': { ru: 'янв.', en: 'Jan' },
+                'jan': { ru: 'янв.', en: 'Jan' },
+                'january': { ru: 'янв.', en: 'Jan' },
+                'фев': { ru: 'фев.', en: 'Feb' },
+                'feb': { ru: 'фев.', en: 'Feb' },
+                'february': { ru: 'фев.', en: 'Feb' },
+                'мар': { ru: 'мар.', en: 'Mar' },
+                'mar': { ru: 'мар.', en: 'Mar' },
+                'march': { ru: 'мар.', en: 'Mar' },
+                'апр': { ru: 'апр.', en: 'Apr' },
+                'apr': { ru: 'апр.', en: 'Apr' },
+                'april': { ru: 'апр.', en: 'Apr' },
+                'май': { ru: 'май', en: 'May' },
+                'мая': { ru: 'май', en: 'May' },
+                'may': { ru: 'май', en: 'May' },
+                'июн': { ru: 'июн.', en: 'Jun' },
+                'jun': { ru: 'июн.', en: 'Jun' },
+                'june': { ru: 'июн.', en: 'Jun' },
+                'июл': { ru: 'июл.', en: 'Jul' },
+                'jul': { ru: 'июл.', en: 'Jul' },
+                'july': { ru: 'июл.', en: 'Jul' },
+                'авг': { ru: 'авг.', en: 'Aug' },
+                'aug': { ru: 'авг.', en: 'Aug' },
+                'august': { ru: 'авг.', en: 'Aug' },
+                'сен': { ru: 'сен.', en: 'Sep' },
+                'sep': { ru: 'сен.', en: 'Sep' },
+                'september': { ru: 'сен.', en: 'Sep' },
+                'окт': { ru: 'окт.', en: 'Oct' },
+                'oct': { ru: 'окт.', en: 'Oct' },
+                'october': { ru: 'окт.', en: 'Oct' },
+                'ноя': { ru: 'ноя.', en: 'Nov' },
+                'nov': { ru: 'ноя.', en: 'Nov' },
+                'november': { ru: 'ноя.', en: 'Nov' },
+                'дек': { ru: 'дек.', en: 'Dec' },
+                'dec': { ru: 'дек.', en: 'Dec' },
+                'december': { ru: 'дек.', en: 'Dec' }
+            };
+
+            if (monthMap[key]) {
+                return monthMap[key][lang];
+            }
+            return monthStr;
+        }
 
         const i18n = {
             ru: {
@@ -1159,18 +1210,19 @@
                         else if (lowerM.includes('окт') || lowerM.includes('ноя') || lowerM.includes('oct') || lowerM.includes('nov')) { saleIcon = '🍂'; saleColor = '#e9684c'; }
 
                         const saleClass = saleIcon ? 'sale-month' : '';
+                        const displayMonth = translateMonth(m, currentLang);
                         
                         yearBody.innerHTML += `<tr class="month-row-${y} ${saleClass}" style="display:none; font-size:0.9em; background: rgba(0,0,0,0.3);">
                             <td style="padding-left: 25px; color: ${saleColor};">
-                                <span class="sale-icon">${saleIcon}</span>${m}
+                                <span class="sale-icon">${saleIcon}</span>${displayMonth}
                             </td>
                             <td style="color:var(--steam-blue); text-align:center;">~${mData.gamesCount || 0}</td>
-                            <td>${fmt(mData.out, y, 'out', m + ' ' + y + ' - ' + t.labelSpend)}</td>
-                            <td>${fmt(mData.games, y, 'games', m + ' ' + y + ' - ' + t.lblGames)}</td>
-                            <td>${fmt(mData.inGame, y, 'inGame', m + ' ' + y + ' - ' + t.labelInGame)}</td>
-                            <td>${fmt(mData.market, y, 'market', m + ' ' + y + ' - ' + t.labelBuy)}</td>
-                            <td>${fmt(mData.gifts, y, 'gifts', m + ' ' + y + ' - ' + t.lblGifts)}</td>
-                            <td style="color:var(--steam-green);">${fmt(mData.marketIn, y, 'marketIn', m + ' ' + y + ' - ' + t.labelSale)}</td>
+                            <td>${fmt(mData.out, y, 'out', displayMonth + ' ' + y + ' - ' + t.labelSpend)}</td>
+                            <td>${fmt(mData.games, y, 'games', displayMonth + ' ' + y + ' - ' + t.lblGames)}</td>
+                            <td>${fmt(mData.inGame, y, 'inGame', displayMonth + ' ' + y + ' - ' + t.labelInGame)}</td>
+                            <td>${fmt(mData.market, y, 'market', displayMonth + ' ' + y + ' - ' + t.labelBuy)}</td>
+                            <td>${fmt(mData.gifts, y, 'gifts', displayMonth + ' ' + y + ' - ' + t.lblGifts)}</td>
+                            <td style="color:var(--steam-green);">${fmt(mData.marketIn, y, 'marketIn', displayMonth + ' ' + y + ' - ' + t.labelSale)}</td>
                         </tr>`;
                     });
                 }
